@@ -1,0 +1,14 @@
+services:
+
+  proxy:
+    build:
+      dockerfile: "Dockerfile"
+      context: .
+    volumes:
+      - "./keys/:/var/jwt/keys"
+      - "./certs/proxy/:/etc/ssl/proxy"
+    environment:
+      TZ: "UTC"
+    ports:
+      - "3128:3128"
+

@@ -1,0 +1,16 @@
+# certificates stuff
+*.crt
+*.key
+*.csr
+*.p12
+*.der
+*.pem
+*.serial
+*.serial.old
+certs/build/*
+**.DS_Store
+
+# java client
+*/target/
+
+
