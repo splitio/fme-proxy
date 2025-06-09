@@ -11,6 +11,7 @@ certs/build/*
 **.DS_Store
 
 # java client
-*/target/
+clients/java/app/build
+clients/java/.gradle
 
 
