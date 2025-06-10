@@ -1,8 +1,21 @@
 services:
 
-  proxy:
+#  ubuntu-proxy:
+#    build:
+#      dockerfile: "ubuntu/Dockerfile"
+#      context: .
+#    volumes:
+#      - "./keys/:/var/jwt/keys"
+#      - "./certs/proxy/:/etc/ssl/proxy"
+#    environment:
+#      TZ: "UTC"
+#    ports:
+#      - "3128:3128"
+
+
+  redhat-proxy:
     build:
-      dockerfile: "Dockerfile"
+      dockerfile: "redhat/Dockerfile"
       context: .
     volumes:
       - "./keys/:/var/jwt/keys"
