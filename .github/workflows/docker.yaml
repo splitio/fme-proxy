@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.ARTIFACTORY_DOCKER_PASS }}
 
       - name: Get version
-        run: echo "VERSION=$(awk '/^const Version/{gsub(/"/, "", $4); print $4}' splitio/version.go)" >> $GITHUB_ENV
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
       - name: Docker Build and Push
         uses: docker/build-push-action@v6
