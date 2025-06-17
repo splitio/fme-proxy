@@ -47,7 +47,6 @@ RUN make install
 COPY conf /usr/local/openresty/nginx/conf
 COPY scripts /usr/local/openresty/nginx/scripts
 RUN mkdir -p /var/jwt/keys
-COPY keys/keys.jwks /var/jwt/keys/keys.jwks
 
 EXPOSE 3128
 
