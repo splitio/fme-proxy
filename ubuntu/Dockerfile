@@ -51,12 +51,6 @@ RUN make install
 COPY conf /usr/local/openresty/nginx/conf
 COPY scripts /usr/local/openresty/nginx/scripts
 
-# TODO: REMOVE THE LINE BELOW!
-COPY passwd /etc/nginx/passwd
-
-RUN mkdir -p /var/jwt/keys
-
 EXPOSE 3128
 
-#ENTRYPOINT ["sleep", "10000"]
 ENTRYPOINT ["/usr/local/openresty/nginx/sbin/nginx", "-g", "daemon off;"]
