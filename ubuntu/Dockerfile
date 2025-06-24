@@ -34,18 +34,26 @@ RUN tar xvzf openresty-1.25.3.2.tar.gz
 RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
 # 3.jwt module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
+# 4. digest auth module
+RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
+RUN cd nginx-http-auth-digest && git checkout ngx_proxy_connect_support
 
 # build openresty with support for modules above
 WORKDIR /tmp/openresty/openresty-1.25.3.2
 RUN ./configure \
     --add-module=../ngx_http_proxy_connect_module \
-    --add-module=../nginx-auth-jwt
+    --add-module=../nginx-auth-jwt \
+    --add-module=../nginx-http-auth-digest
 RUN patch -d build/nginx-1.25.3/ -p 1 < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch
 RUN make
 RUN make install
 
 COPY conf /usr/local/openresty/nginx/conf
 COPY scripts /usr/local/openresty/nginx/scripts
+
+# TODO: REMOVE THE LINE BELOW!
+COPY passwd /etc/nginx/passwd
+
 RUN mkdir -p /var/jwt/keys
 
 EXPOSE 3128
