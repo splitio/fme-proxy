@@ -54,8 +54,8 @@ RUN patch -d build/nginx-1.25.3/ -p 1 < ../ngx_http_proxy_connect_module/patch/p
 RUN make
 RUN make install
 
-RUN mkdir -p /etc/nginx/{conf,credentials}
-RUN mkdir -p /var/{run,log/nginx}
+RUN bash -c mkdir -p /etc/nginx/{conf,credentials}
+RUN bash -c mkdir -p /var/{run,log/nginx}
 RUN ln -s /dev/stdout /var/log/nginx/access.log
 RUN ln -s /dev/stderr /var/log/nginx/error.log
 
