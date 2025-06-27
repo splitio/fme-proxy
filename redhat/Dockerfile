@@ -1,4 +1,10 @@
-FROM redhat/ubi10:latest
+FROM redhat/ubi10:latest as builder
+
+ENV OPENRESTY_VERSION 1.27.1.2
+ENV OPENRESTY_NGINX_CORE_VERSION 1.27.1
+ENV OPENRESTY_NGX_CONNECT_PATCH_VERSION 102101
+ENV OPENRESTY_DIST_SUFFIX harness
+ENV PCRE2_VERSION 10.45
 
 RUN dnf install -y --setopt=tsflags=nodocs \
     yum-utils \
@@ -14,8 +20,6 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     make \
     autoconf \
     automake \
-    pcre2 \
-    pcre2-devel \
     openssl \
     openssl-devel \
     zlib \
@@ -28,9 +32,9 @@ RUN mkdir -p /tmp/openresty
 WORKDIR /tmp/openresty
 
 # 1. PCRE
-RUN wget https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.45/pcre2-10.45.tar.bz2
-RUN bzip2 -d pcre2-10.45.tar.bz2
-RUN tar xvf pcre2-10.45.tar
+RUN wget https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.45/pcre2-${PCRE2_VERSION}.tar.bz2
+RUN bzip2 -d pcre2-${PCRE2_VERSION}.tar.bz2
+RUN tar xvf pcre2-${PCRE2_VERSION}.tar
 
 # 2. JANSSON (from RH repos to ensure ABI compatibility)
 RUN yumdownloader --source jansson
@@ -41,26 +45,65 @@ RUN pushd jansson-2.14 && ./configure && make && make install && popd
 # 3. connect module
 RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
 
-# 4. jwt module
+# 4. jwt auth module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
 
+# 5. digest auth module
+RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
+RUN cd nginx-http-auth-digest && git checkout ngx_proxy_connect_support
+
 # 5. openresty
-RUN wget https://openresty.org/download/openresty-1.27.1.2.tar.gz
-RUN tar xvzf openresty-1.27.1.2.tar.gz
-WORKDIR /tmp/openresty/openresty-1.27.1.2
+RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
+RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
+WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
-    --with-pcre=/tmp/openresty/pcre2-10.45 \
+    --prefix=/usr \
+    --with-pcre=/tmp/openresty/pcre2-${PCRE2_VERSION} \
     --add-module=../ngx_http_proxy_connect_module \
-    --add-module=../nginx-auth-jwt
-RUN patch -d build/nginx-1.27.1/ -p 1 < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch
+    --add-module=../nginx-auth-jwt \
+    --add-module=../nginx-http-auth-digest \
+    --sbin-path=/opt/openresty/sbin/nginx \
+    --conf-path=/opt/openresty/conf/nginx.conf \
+    --pid-path=/var/run/nginx.pid \
+    --error-log-path=/var/log/nginx/access.log \
+    --http-log-path=/var/log/nginx/error.log
+RUN patch -d build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
+    -p 1 \
+    < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_${OPENRESTY_NGX_CONNECT_PATCH_VERSION}.patch
 RUN gmake
-RUN gmake install
+RUN gmake DESTDIR=/tmp/openresty-bin install
 
-COPY conf /usr/local/openresty/nginx/conf
-COPY scripts /usr/local/openresty/nginx/scripts
-RUN mkdir -p /var/jwt/keys
-COPY keys/keys.jwks /var/jwt/keys/keys.jwks
+# generate distributable package
+WORKDIR /tmp/openresty-bin
+RUN find . -type f -print > ../dist.lst
+RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz $(cat ../dist.lst)
 
-EXPOSE 3128
 
-ENTRYPOINT ["/usr/local/openresty/nginx/sbin/nginx", "-g", "daemon off;"]
+# ------------
+
+
+FROM redhat/ubi10:latest as runner
+
+ENV OPENRESTY_VERSION 1.27.1.2
+ENV OPENRESTY_DIST_SUFFIX harness
+
+RUN dnf install -y --setopt=tsflags=nodocs \
+    jansson
+
+COPY --from=builder /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz /
+RUN tar xvzf openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
+
+# setup shared libraries
+RUN ln -s /usr/luajit/lib/libluajit-5.1.so.2.1.ROLLING /usr/local/lib/libluajit-5.1.so.2
+
+# setup logging
+RUN mkdir -p /var/{run,log/nginx}
+RUN ln -s /dev/stdout /var/log/nginx/access.log
+RUN ln -s /dev/stderr /var/log/nginx/error.log
+
+# copy custom configs & scripts
+COPY conf /opt/openresty/conf
+COPY lua /opt/openresty/lua
+COPY scripts /opt/openresty/scripts
+
+ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]
