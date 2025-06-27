@@ -20,6 +20,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     libluajit-5.1-common \
     libluajit-5.1-dev \
     luajit \
+    gawk \
     -y 
 RUN DEBIAN_FRONTEND=noninteractive apt remove --purge --auto-remove -y
 
@@ -34,22 +35,31 @@ RUN tar xvzf openresty-1.25.3.2.tar.gz
 RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
 # 3.jwt module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
+# 4. digest auth module
+RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
+RUN cd nginx-http-auth-digest && git checkout ngx_proxy_connect_support
 
 # build openresty with support for modules above
 WORKDIR /tmp/openresty/openresty-1.25.3.2
 RUN ./configure \
     --add-module=../ngx_http_proxy_connect_module \
-    --add-module=../nginx-auth-jwt
+    --add-module=../nginx-auth-jwt \
+    --add-module=../nginx-http-auth-digest \
+    --sbin-path=/opt/openresty/sbin/nginx \
+    --conf-path=/opt/openresty/conf/nginx.conf \
+    --pid-path=/var/run/nginx.pid \
+    --error-log-path=/var/log/nginx/access.log \
+    --http-log-path=/var/log/nginx/error.log
 RUN patch -d build/nginx-1.25.3/ -p 1 < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch
 RUN make
 RUN make install
 
-COPY conf /usr/local/openresty/nginx/conf
-COPY scripts /usr/local/openresty/nginx/scripts
-RUN mkdir -p /var/jwt/keys
-COPY keys/keys.jwks /var/jwt/keys/keys.jwks
+RUN mkdir -p /var/{run,log/nginx}
+RUN ln -s /dev/stdout /var/log/nginx/access.log
+RUN ln -s /dev/stderr /var/log/nginx/error.log
 
-EXPOSE 3128
+COPY conf /opt/openresty/conf
+COPY lua /opt/openresty/lua
+COPY scripts /opt/openresty/scripts
 
-#ENTRYPOINT ["sleep", "10000"]
-ENTRYPOINT ["/usr/local/openresty/nginx/sbin/nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]
