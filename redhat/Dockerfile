@@ -97,11 +97,12 @@ RUN tar xvzf openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 RUN ln -s /usr/luajit/lib/libluajit-5.1.so.2.1.ROLLING /usr/local/lib/libluajit-5.1.so.2
 
 # setup logging
-RUN mkdir -p /var/{run,log/nginx}
+RUN bash -c 'mkdir -p /var/{run,log/nginx}'
 RUN ln -s /dev/stdout /var/log/nginx/access.log
 RUN ln -s /dev/stderr /var/log/nginx/error.log
 
 # copy custom configs & scripts
+RUN bash -c 'mkdir -p /etc/nginx/{conf,credentials}'
 COPY conf /opt/openresty/conf
 COPY lua /opt/openresty/lua
 COPY scripts /opt/openresty/scripts
