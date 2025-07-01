@@ -8,13 +8,12 @@ IFS_BAK=${IFS}
 export IFS=''
 
 read -r -d '' BASE_CONF << "EOF"
-user  {{USER}};
 daemon off;
 
 worker_processes  {{WORKER_PROCESSES}};
 
 error_log /var/log/nginx/error.log;
-pid /var/run/nginx.pid;
+pid /var/run/nginx/nginx.pid;
 
 events {
     worker_connections  {{WORKER_CONNECTIONS}};
@@ -25,12 +24,21 @@ http {
     default_type  application/octet-stream;
     access_log /var/log/nginx/access.log;
 
+    client_body_temp_path /tmp/client_body_temp;
+    proxy_temp_path /tmp/proxy_temp;
+    fastcgi_temp_path /tmp/fastcgi_temp;
+    uwsgi_temp_path /tmp/uwsgi_temp;
+    scgi_temp_path /tmp/scgi_temp;
+
+    lua_package_path "/etc/nginx/lua/?.lua;;";
+{{WHITELIST_BLOCK}}
+
     # version 
     server {
         listen 80;
         location /version {
             default_type text/plain;
-            content_by_lua_block { ngx.say("0.0.1-alpha1") }
+            content_by_lua_block { ngx.say("{{VERSION}}") }
         }
     }
 {{SERVER_DEFINITIONS}}
@@ -54,6 +62,8 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
         proxy_connect_allow            443 563;
         proxy_connect_connect_timeout  10s;
         proxy_connect_data_timeout     120s; # 2x SSE keep-alive
+
+
     }
 EOF
 
@@ -90,6 +100,20 @@ read -r -d '' BEARER_AUTH_BLOCK <<"EOF"
         auth_jwt                        "all";
         auth_jwt_key_file               {{BEARER_AUTH_JWKS}};
         rewrite_by_lua_file             /opt/openresty/lua/proxy_auth_bearer.lua;
+
+EOF
+
+read -r -d '' WHITELIST_BLOCK << "EOF"
+    init_by_lua_block { require "host_whitelist" }
+    access_by_lua_block {
+        local allowed_hosts = require "host_whitelist".whitelist
+        for i, v in ipairs(allowed_hosts) do
+            if ngx.req.get_headers()["Host"] == v then
+                return
+            end
+        end
+        ngx.exit(ngx.HTTP_FORBIDDEN)
+    }
 
 EOF
 
@@ -207,16 +231,22 @@ for sid in ${HFP_PROXIES}; do
     server_definitions="${server_definitions}\n$(gen_server_section ${sid})"
 done
 
+whitelist_block=""
+if [[ ${HFP_ALLOWED_TARGET_HOSTS} != "*" ]]; then
+    whitelist_block="${WHITELIST_BLOCK}"
+fi
+
 echo -n "${BASE_CONF}" |
     ${AWK} \
-        -v user="${HFP_USER:-nobody}" \
+        -v version="$(head -n1 /.version)" \
         -v processes="${HFP_WORKER_PROCESSES:-4}" \
         -v connections="${HFP_WORKER_CONNECTIONS:-1024}" \
         -v servers="${server_definitions}" \
+        -v whitelist="${whitelist_block}" \
         '{
-            sub("{{USER}}",user);
+            sub("{{VERSION}}",version);
             sub("{{WORKER_PROCESSES}}",processes);
             sub("{{WORKER_CONNECTIONS}}",connections);
             sub("{{SERVER_DEFINITIONS}}",servers);
+            sub("{{WHITELIST_BLOCK}}",whitelist);
         };1'
-     

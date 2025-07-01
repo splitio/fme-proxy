@@ -1,5 +1,7 @@
 FROM redhat/ubi10:latest as builder
 
+ARG FME_PROXY_VERSION
+
 ENV OPENRESTY_VERSION 1.27.1.2
 ENV OPENRESTY_NGINX_CORE_VERSION 1.27.1
 ENV OPENRESTY_NGX_CONNECT_PATCH_VERSION 102101
@@ -84,6 +86,8 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 
 FROM redhat/ubi10:latest as runner
 
+ARG FME_PROXY_VERSION
+
 ENV OPENRESTY_VERSION 1.27.1.2
 ENV OPENRESTY_DIST_SUFFIX harness
 
@@ -106,5 +110,24 @@ RUN bash -c 'mkdir -p /etc/nginx/{conf,credentials}'
 COPY conf /opt/openresty/conf
 COPY lua /opt/openresty/lua
 COPY scripts /opt/openresty/scripts
+
+RUN mkdir -p /var/run/nginx
+RUN mkdir -p /etc/nginx/lua
+
+# setup version
+RUN echo "${FME_PROXY_VERSION}" > /.version
+
+# setup running user
+RUN groupadd --system --gid 101 nginx
+RUN useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx
+RUN chown -R :nginx /var/log/nginx
+RUN chown -R :nginx /opt/openresty
+RUN chown -R :nginx /etc/nginx
+RUN chown -R :nginx /var/run/nginx
+RUN chmod -R g+rwx /etc/nginx
+RUN chmod g+x /opt/openresty/scripts/entrypoint.sh
+RUN chmod g+x /opt/openresty/sbin/nginx
+RUN chmod g+rw /var/run/nginx
+USER nginx
 
 ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]

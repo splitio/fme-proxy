@@ -1,0 +1,6 @@
+return { 
+    whitelist = {
+        {{WHITELIST}}
+    }
+}
+
