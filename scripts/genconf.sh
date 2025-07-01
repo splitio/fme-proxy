@@ -35,7 +35,7 @@ http {
 
     # version 
     server {
-        listen 80;
+        listen 8080;
         location /version {
             default_type text/plain;
             content_by_lua_block { ngx.say("{{VERSION}}") }
