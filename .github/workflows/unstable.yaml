@@ -17,8 +17,7 @@ jobs:
       matrix:
         os:
           - ubuntu
-          # temporarily disable red hat for faster build/deploy cycles
-          #- redhat
+          - redhat
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
