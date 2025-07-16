@@ -45,14 +45,15 @@ RUN bzip2 -d jansson-2.14.tar.bz2 && tar xvf jansson-2.14.tar
 RUN pushd jansson-2.14 && ./configure && make && make install && popd
 
 # 3. connect module
-RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
+RUN git clone https://github.com/mredolatti/ngx_http_proxy_connect_module.git
+RUN cd ngx_http_proxy_connect_module && git checkout 45a91e6 
 
 # 4. jwt auth module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
 
 # 5. digest auth module
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
-RUN cd nginx-http-auth-digest && git checkout ngx_proxy_connect_support
+RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. openresty
 RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
