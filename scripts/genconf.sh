@@ -25,6 +25,12 @@ http {
     default_type  application/octet-stream;
     access_log /var/log/nginx/access.log;
 
+    # WebSocket support
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
     # version 
     server {
         listen 80;
@@ -54,6 +60,13 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
         proxy_connect_allow            443 563;
         proxy_connect_connect_timeout  10s;
         proxy_connect_data_timeout     120s; # 2x SSE keep-alive
+
+        # WebSocket proxy configuration
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 EOF
 
@@ -209,7 +222,7 @@ done
 
 echo -n "${BASE_CONF}" |
     ${AWK} \
-        -v user="${HFP_USER:-nobody}" \
+        -v user="${HFP_USER:-root}" \
         -v processes="${HFP_WORKER_PROCESSES:-4}" \
         -v connections="${HFP_WORKER_CONNECTIONS:-1024}" \
         -v servers="${server_definitions}" \
