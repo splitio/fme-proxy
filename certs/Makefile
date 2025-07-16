@@ -25,7 +25,8 @@ bundle: $(PROXY_CERTS) $(CLIENT_CERTS)
 	cp $(CLIENT_DIR)/client.p12 $(SHARED_CLIENT)
 
 build: dirs $(ROOT_CERTS) $(PROXY_CERTS) $(CLIENT_CERTS)
-dirs: $(ROOT_DIR) $(PROXY_DIR) $(CLIENT_DIR)
+dirs:
+	mkdir -p $(ROOT_DIR) $(PROXY_DIR) $(CLIENT_DIR)
 
 
 clean:

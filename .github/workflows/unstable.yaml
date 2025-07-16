@@ -3,7 +3,11 @@ name: unstable
 on:
   push:
     branches-ignore:
-      - master
+      - main
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   push-docker-image:
@@ -33,14 +37,16 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_RO_TOKEN }}
 
-
-
-      - name: Login to Artifactory
-        uses: docker/login-action@v3
+      - name: Configure AWS credentials
+        if: ${{ github.event_name == 'push' }}
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: splitio-docker-dev.jfrog.io
-          username: ${{ vars.ARTIFACTORY_DOCKER_USER }}
-          password: ${{ secrets.ARTIFACTORY_DOCKER_PASS }}
+          role-to-assume: ${{ vars.ECR_TESTING_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        if: ${{ github.event_name == 'push' }}
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Get short hash
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
@@ -52,4 +58,5 @@ jobs:
           file: ${{ matrix.os }}/Dockerfile
           push: ${{ github.event_name == 'push' }}
           platforms: linux/amd64 #,linux/arm64 -- temporarily disable multi-arcxh
-          tags: splitio-docker-dev.jfrog.io/fme-proxy-${{ matrix.os }}:${{ env.SHORT_SHA }}
+          tags: |
+            ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}-${{ matrix.os }}:${{ env.SHORT_SHA }}
