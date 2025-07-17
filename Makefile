@@ -110,7 +110,7 @@ req_digest_plain:
 		--proxy-user "doc:lleguevolando" \
 		-XFGET $(TARGET)
 
-## Build multi-platform images for release
+## Build multi-platform images for release and push them to dockerhub
 images_release:
 	@docker buildx version &> /dev/null|| (echo "docker buildx plugin is required to build multi-platform images" && exit 1)
 	@docker buildx ls | awk 'BEGIN { RET=1 } /^xbuilder/  { RET = !($$2 == "docker-container")} END { exit RET }' || \
@@ -123,6 +123,7 @@ images_release:
 		-t splitsoftware/fme-proxy:ubuntu-latest \
 		-t splitsoftware/fme-proxy:$(VERSION) \
 		-t splitsoftware/fme-proxy:ubuntu-$(VERSION) \
+		--push \
 		-f ubuntu/Dockerfile .
 	$(DOCKER) buildx build  \
 		--builder xbuilder \
@@ -130,6 +131,7 @@ images_release:
 		$(COMMON_BUILD_ARGS) \
 		-t splitsoftware/fme-proxy:redhat-latest \
 		-t splitsoftware/fme-proxy:redhat-$(VERSION) \
+		--push \
 		-f redhat/Dockerfile .
 	@echo "Images created. Make sure everything works ok, and then run the following commands to push them."
 	@echo "$(DOCKER) push splitsoftware/fme-proxy:latest"
