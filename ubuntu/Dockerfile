@@ -33,12 +33,13 @@ WORKDIR /tmp/openresty
 RUN wget https://openresty.org/download/openresty-1.25.3.2.tar.gz
 RUN tar xvzf openresty-1.25.3.2.tar.gz
 # 2.connect module
-RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
+RUN git clone https://github.com/mredolatti/ngx_http_proxy_connect_module.git
+RUN cd ngx_http_proxy_connect_module && git checkout 45a91e6 
 # 3.jwt module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
 # 4. digest auth module
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
-RUN cd nginx-http-auth-digest && git checkout ngx_proxy_connect_support
+RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # build openresty with support for modules above
 WORKDIR /tmp/openresty/openresty-1.25.3.2

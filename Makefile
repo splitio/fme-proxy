@@ -21,14 +21,14 @@ docker-build:
 docker-run:
 	$(DOCKER) run \
 		--rm \
-		--name fme-proxy-$(OS) \
+		--name fme-proxy-$(OS)-$(VERSION) \
 		-p "8080:80" \
 		-p "$(LOCAL_TLS_PORT):3128" \
 		-p "$(LOCAL_MTLS_PORT):3129" \
 		-p "$(LOCAL_BASIC_PORT):3130" \
 		-p "$(LOCAL_BEARER_PORT):3131" \
 		-p "$(LOCAL_DIGEST_PORT):3132" \
-		-e TZ="UTC" \`
+		-e TZ="UTC" \
 		-e HFP_PROXIES=tls,mtls,basic,digest,bearer \
 		-e HFP_DEBUG_CONF="true" \
 		-e HFP_tls_PORT=3128 \
@@ -58,11 +58,11 @@ docker-run:
 		--volume "${PWD}/certs/proxy/:/etc/ssl/proxy" \
 		--volume "${PWD}/passwd:/etc/nginx/passwd" \
 		--volume "${PWD}/keys:/etc/nginx/keys" \
-		fme-proxy-$(OS):$(VERSION)
+		fme-proxy:$(OS)-$(VERSION)
 
 ## Starts a shell in a local container (accepts OS=xxx)
 shell:
-	$(DOCKER) exec -it fme-proxy-$(OS) bash
+	$(DOCKER) exec -it fme-proxy-$(OS)-$(VERSION) bash
 
 ## Make a proxied request using a TLS endpoint with no auth (accepts TARGET=xxx)
 req_noauth_tls:

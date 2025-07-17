@@ -25,7 +25,8 @@ bundle: $(PROXY_CERTS) $(CLIENT_CERTS)
 	cp $(CLIENT_DIR)/client.p12 $(SHARED_CLIENT)
 
 build: dirs $(ROOT_CERTS) $(PROXY_CERTS) $(CLIENT_CERTS)
-dirs: $(ROOT_DIR) $(PROXY_DIR) $(CLIENT_DIR)
+dirs:
+	mkdir -p $(ROOT_DIR) $(PROXY_DIR) $(CLIENT_DIR)
 
 
 clean:
@@ -61,8 +62,8 @@ $(PROXY_DIR)/proxy.key $(PROXY_DIR)/proxy.crt:
 		-key $(PROXY_DIR)/proxy.key \
 		-new \
 		-sha256 \
-		-addext 'subjectAltName = DNS:harness-fproxy,email:admin@harness.io' \
-		-subj '/C=AR/ST=Buenos Aires/L=Tandil/O=Harness/OU=IT/CN=harness-fproxy/emailAddress=martin.redolatti@harness.io' \
+		-addext 'subjectAltName = DNS:fme-forward-proxy,email:admin@harness.io' \
+		-subj '/C=AR/ST=Buenos Aires/L=Tandil/O=Harness/OU=IT/CN=fme-forward-proxy/emailAddress=martin.redolatti@harness.io' \
 		-out $(PROXY_DIR)/proxy.csr
 	openssl ca -config openssl.conf \
 		-batch \

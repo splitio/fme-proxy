@@ -55,7 +55,7 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
 {{AUTH_BLOCK}}
 
         # dns resolver used by forward proxying
-        resolver                       8.8.8.8 ipv6=off;
+        resolver                       {{RESOLVER}} ipv6=off;
     
         # forward proxy for CONNECT requests
         proxy_connect;
@@ -63,7 +63,7 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
         proxy_connect_connect_timeout  10s;
         proxy_connect_data_timeout     120s; # 2x SSE keep-alive
 
-
+{{PROXY_CHAIN_BLOCK}}
     }
 EOF
 
@@ -117,6 +117,20 @@ read -r -d '' WHITELIST_BLOCK << "EOF"
 
 EOF
 
+read -r -d '' PROXY_CHAIN_BLOCK <<"EOF"
+        proxy_connect_chain_proxy      {{NEXT_PROXY_HOST}};
+{{PROXY_CHAIN_SSL_BLOCK}}
+
+EOF
+
+read -r -d '' PROXY_CHAIN_SSL_BLOCK << "EOF"
+        proxy_connect_chain_proxy_ssl;
+        proxy_connect_chain_proxy_ssl_verify;
+        proxy_connect_chain_proxy_ssl_verify_cert {{PROXY_CHAIN_SSL_CERT}};
+
+EOF
+
+
 IFS=${IFS_BAK}
 
 ############## internal functions
@@ -133,15 +147,23 @@ function gen_server_section() {
     fi
 
     auth_block=$(gen_auth_block ${id})
+    proxy_chain_block=$(gen_proxy_chain_block "${id}")
+    resolver=$(get_var "${id}" RESOLVER_IP)
+    if [ -z "${resolver}" ]; then
+        resolver="8.8.8.8"
+    fi
 
     echo -n "${SERVER_DEFINITION}" |
         ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v auth_block="${auth_block}" \
+            -v proxy_chain_block="${proxy_chain_block}" -v resolver="${resolver}" \
         '{
             sub("{{NAME}}", id);
             sub("{{PORT}}", port);
             sub("{{SSL}}", ssl);
             sub("{{SSL_BLOCK}}", ssl_block);
             sub("{{AUTH_BLOCK}}", auth_block);
+            sub("{{PROXY_CHAIN_BLOCK}}", proxy_chain_block);
+            sub("{{RESOLVER}}", resolver);
         };1'
 }
 
@@ -169,6 +191,33 @@ function gen_ssl_block() {
             sub("{{SERVER_PRIVATE_KEY}}", private_key);
             sub("{{CLIENT_VALIDATION_BLOCK}}", cv_block);
         };1'
+}
+
+function gen_proxy_chain_block() {
+    local id="${1}"
+
+    [[ -z $(get_var "${id}" PROXY_CHAIN) ]] && return 0
+    local proxy_url=$(get_var "${id}" PROXY_CHAIN)
+    if [ ! -z $(get_var "${id}" PROXY_CHAIN_SSL) ]; then
+        proxy_chain_ssl_block=$(gen_proxy_chain_ssl_block "${id}")
+    fi
+    echo -n "${PROXY_CHAIN_BLOCK}" |
+        ${AWK} -v proxy_url="${proxy_url}" -v pcssl="${proxy_chain_ssl_block}" \
+        '{
+            sub("{{NEXT_PROXY_HOST}}", proxy_url);
+            sub("{{PROXY_CHAIN_SSL_BLOCK}}", pcssl);
+        };1'
+}
+
+function gen_proxy_chain_ssl_block() {
+    id="${1}"
+    [[ -z $(get_var "${id}" PROXY_CHAIN_CA_CERT) ]] && \
+        log_error "CA cert for nested proxy verification is mandatory is proxy chain ssl is enabled" && \
+        abort
+
+    ssl_cert=$(get_var "${id}" PROXY_CHAIN_CA_CERT)
+    echo -n "${PROXY_CHAIN_SSL_BLOCK}" |
+        ${AWK} -v certificate="${ssl_cert}" '{ sub("{{PROXY_CHAIN_SSL_CERT}}", certificate); };1'
 }
 
 function gen_auth_block() {
