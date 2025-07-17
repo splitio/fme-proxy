@@ -118,7 +118,7 @@ read -r -d '' WHITELIST_BLOCK << "EOF"
 EOF
 
 read -r -d '' PROXY_CHAIN_BLOCK <<"EOF"
-        proxy_connect_chain_proxy      {{NEXT_PROXY_HOST}}
+        proxy_connect_chain_proxy      {{NEXT_PROXY_HOST}};
 {{PROXY_CHAIN_SSL_BLOCK}}
 
 EOF
