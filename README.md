@@ -94,3 +94,23 @@ As mentioned above, the applications supports listening on multiple ports, each 
 - JWKS store with public keys that can be used to parse a token inside a bearer auth CONNECT request
 - Default: none / required if `HFP_&lt;server_name&gt;_AUTH` is set to bearer
 - Example: `/my_volume/keys/keys.jwks`
+#### HFP_&lt;server_name&gt;_PROXY_CHAIN
+- Context: server-specific
+- Upstream proxy to which this proxy must connect and forward requests (format: &lt;host&gt;:&lt;port&gt;)
+- Default: none
+- Example: `my-upstream-proxy:3128`
+#### HFP_&lt;server_name&gt;_PROXY_CHAIN_SSL
+- Context: server-specific
+- Setup a TLS connection between this proxy and the upstream, prior to issuing the CONNECT request on the latter
+- Default: disabled
+- Example: `true`
+#### HFP_&lt;server_name&gt;_PROXY_CHAIN_CA_CERT
+- Context: server-specific
+- CA certificate to use to validate use when verifying upstream's cert.
+- Default: none / required if `HFP_&lt;server_name&gt;_PROXY_CHAIN_SSL` is enabled.
+- Example: `/my_volume/pki/ca.crt`
+#### HFP_&lt;server_name&gt;_RESOLVER
+- Context: server-specific
+- Name server to use when resolving upstream. Useful if an internal DNS is required to reach hosts inside a VPC or kubernetes cluster.
+- Default: 8.8.8.8
+- Example: `127.0.0.53`
