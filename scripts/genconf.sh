@@ -281,7 +281,7 @@ function gen_target_whitelist_init_block() {
     done <<< "${HFP_PROXIES},"
 
     if [ ! -z "${statements}" ]; then
-        ${AWK} -v stmts="${statements}" '{sub("{{REQUIRE_LIST}}", stmts)};1' <<< "${TARGET_WHITELIST_INIT_BLOCK}"
+        ${AWK} -v stmts="${statements%???}" '{sub("{{REQUIRE_LIST}}", stmts)};1' <<< "${TARGET_WHITELIST_INIT_BLOCK}"
     fi
 }
 
