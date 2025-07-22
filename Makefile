@@ -12,6 +12,7 @@ TARGET ?= "https://sdk.split.io/version"
 VERSION := $(shell head -n1 VERSION)
 COMMON_BUILD_ARGS := --build-arg FME_PROXY_VERSION="$(VERSION)"
 
+default: help
 
 ## Build docker image (accepts OS=[ubuntu|redhat]
 docker-build:
