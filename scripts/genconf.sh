@@ -276,12 +276,12 @@ function gen_target_whitelist_init_block() {
     while read -r -d ',' sid; do
         local allowed_targets=$(get_var ALLOWED_TARGETS)
         if [ "${allowed_targets}" != "\*" ]; then
-            statements="${statements}        require \"host_whitelist_${sid}.lua\",\n"
+            statements="${statements}        require \"host_whitelist_${sid}.lua\"\n"
         fi
     done <<< "${HFP_PROXIES},"
 
     if [ ! -z "${statements}" ]; then
-        ${AWK} -v stmts="${statements%???}" '{sub("{{REQUIRE_LIST}}", stmts)};1' <<< "${TARGET_WHITELIST_INIT_BLOCK}"
+        ${AWK} -v stmts="${statements}" '{sub("{{REQUIRE_LIST}}", stmts)};1' <<< "${TARGET_WHITELIST_INIT_BLOCK}"
     fi
 }
 
