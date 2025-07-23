@@ -31,6 +31,12 @@ http {
     lua_package_path "/etc/nginx/lua/?.lua;;";
 {{TARGET_WHITELIST_INIT_BLOCK}}
 
+    # WebSocket support
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
     # version 
     server {
         listen 8080;
@@ -60,6 +66,14 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
         proxy_connect_allow            {{ALLOWED_TARGET_PORTS}};
         proxy_connect_connect_timeout  10s;
         proxy_connect_data_timeout     120s; # 2x SSE keep-alive
+
+        # WebSocket proxy configuration
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
 
 {{PROXY_CHAIN_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
