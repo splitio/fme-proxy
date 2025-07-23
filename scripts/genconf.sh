@@ -10,7 +10,7 @@ daemon off;
 
 worker_processes  {{WORKER_PROCESSES}};
 
-error_log /var/log/nginx/error.log;
+error_log /var/log/nginx/error.log {{LOG_LEVEL}};
 pid /var/run/nginx/nginx.pid;
 
 events {
@@ -18,6 +18,10 @@ events {
 }
 
 http {
+
+    http2 off;
+    http3 off;
+
     include       /opt/openresty/conf/mime.types;
     default_type  application/octet-stream;
     access_log /var/log/nginx/access.log;
@@ -30,12 +34,6 @@ http {
 
     lua_package_path "/etc/nginx/lua/?.lua;;";
 {{TARGET_WHITELIST_INIT_BLOCK}}
-
-    # WebSocket support
-    map $http_upgrade $connection_upgrade {
-        default upgrade;
-        ''      close;
-    }
 
     # version 
     server {
@@ -66,14 +64,6 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
         proxy_connect_allow            {{ALLOWED_TARGET_PORTS}};
         proxy_connect_connect_timeout  10s;
         proxy_connect_data_timeout     120s; # 2x SSE keep-alive
-
-        # WebSocket proxy configuration
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-
 
 {{PROXY_CHAIN_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
@@ -320,11 +310,13 @@ ${AWK} \
     -v connections="${HFP_WORKER_CONNECTIONS:-1024}" \
     -v servers="${server_definitions}" \
     -v whinit="$(gen_target_whitelist_init_block)" \
+    -v loglevel="${HFP_LOG_LEVEL:-info}" \
     '{
         sub("{{VERSION}}",version);
         sub("{{WORKER_PROCESSES}}",processes);
         sub("{{WORKER_CONNECTIONS}}",connections);
         sub("{{SERVER_DEFINITIONS}}",servers);
         sub("{{TARGET_WHITELIST_INIT_BLOCK}}", whinit); 
+        sub("{{LOG_LEVEL}}", loglevel); 
     };1' \
     <<< "${BASE_CONF}"
