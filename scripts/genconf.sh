@@ -19,9 +19,6 @@ events {
 
 http {
 
-    http2 off;
-    http3 off;
-
     include       /opt/openresty/conf/mime.types;
     default_type  application/octet-stream;
     access_log /var/log/nginx/access.log;
