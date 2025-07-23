@@ -47,10 +47,10 @@ As mentioned above, the applications supports listening on multiple ports, each 
 - Context: global
 - How many connections to handle per worker
 - Default: `1024`
-#### HFP_ALLOWED_TARGET_HOSTS
+#### HFP_LOG_LEVEL
 - Context: global
-- Comma separated list of hosts to which tunnels can be established. Non matching hosts will get a 403 when attempting CONNECT request.
-- Default: `sdk.split.io:443,auth.split.io:443,streaming.split.io:443,events.split.io:443,telemetry.split.io:443`
+- Maximum level of unfiltered logs
+- Default: `info`
 #### HFP_&lt;server_name&gt;_PORT
 - Context: server-specific
 - Port on which this server will listen on
@@ -62,12 +62,12 @@ As mentioned above, the applications supports listening on multiple ports, each 
 #### HFP_&lt;server_name&gt;_SSL_CERTIFICATE
 - Context: server-specific
 - Server certificate to use for traffic encryption
-- Default: none / required if `HFP_&lt;server_name&gt;_SSL` is enabled
+- Default: none / required if `HFP_<server_name>_SSL` is enabled
 - Example: `/my_volume/pki/server.crt`
 #### HFP_&lt;server_name&gt;_SSL_PRIVATE_KEY
 - Context: server-specific
 - Private key from which the certificate's pubkey is derived.
-- Default: none / required if `HFP_&lt;server_name&gt;_SSL` is enabled
+- Default: none / required if `HFP_<server_name>_SSL` is enabled
 - Example: `/my_volume/pki/server.key`
 #### HFP_&lt;server_name&gt;_SSL_CLIENT_CERTIFICATE
 - Context: server-specific
@@ -82,17 +82,17 @@ As mentioned above, the applications supports listening on multiple ports, each 
 #### HFP_&lt;server_name&gt;_AUTH_BASIC_PASSWD
 - Context: server-specific
 - Passwd file with user/hashes used for basic authentication
-- Default: none / required if `HFP_&lt;server_name&gt;_AUTH` is set to basic
+- Default: none / required if `HFP_<server_name>_AUTH` is set to basic
 - Example: `/my_volume/passwd/basic.passwd`
 #### HFP_&lt;server_name&gt;_AUTH_DIGEST_PASSWD
 - Context: server-specific
 - Passwd file with user/hashes used for digest authentication
-- Default: none / required if `HFP_&lt;server_name&gt;_AUTH` is set to digest
+- Default: none / required if `HFP_<server_name>_AUTH` is set to digest
 - Example: `/my_volume/passwd/digest.passwd`
 #### HFP_&lt;server_name&gt;_AUTH_BEARER_JWKS
 - Context: server-specific
 - JWKS store with public keys that can be used to parse a token inside a bearer auth CONNECT request
-- Default: none / required if `HFP_&lt;server_name&gt;_AUTH` is set to bearer
+- Default: none / required if `HFP_<server_name>_AUTH` is set to bearer
 - Example: `/my_volume/keys/keys.jwks`
 #### HFP_&lt;server_name&gt;_PROXY_CHAIN
 - Context: server-specific
@@ -107,10 +107,18 @@ As mentioned above, the applications supports listening on multiple ports, each 
 #### HFP_&lt;server_name&gt;_PROXY_CHAIN_CA_CERT
 - Context: server-specific
 - CA certificate to use to validate use when verifying upstream's cert.
-- Default: none / required if `HFP_&lt;server_name&gt;_PROXY_CHAIN_SSL` is enabled.
+- Default: none / required if `HFP_<server_name>_PROXY_CHAIN_SSL` is enabled.
 - Example: `/my_volume/pki/ca.crt`
 #### HFP_&lt;server_name&gt;_RESOLVER
 - Context: server-specific
 - Name server to use when resolving upstream. Useful if an internal DNS is required to reach hosts inside a VPC or kubernetes cluster.
 - Default: 8.8.8.8
 - Example: `127.0.0.53`
+#### HFP_&lt;server_name&gt;_ALLOWED_TARGETS
+- Context: server-specific
+- Comma separated list of host:port pairs to which tunnels can be established. Non matching hosts will get a 403 when attempting CONNECT request.
+- Default: `sdk.split.io:443,auth.split.io:443,streaming.split.io:443,events.split.io:443,telemetry.split.io:443`
+#### HFP_&lt;server_name&gt;_ALLOWED_TARGET_PORTS
+- Context: server-specific
+- Comma separated list of ports to which tunnels can be established. It must include all ports specified in `HFP_<server_name>_ALLOWED_TARGETS` if != "*"
+- Default: `443`

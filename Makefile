@@ -11,13 +11,12 @@ LOCAL_DIGEST_PORT ?= 3132
 TARGET ?= "https://sdk.split.io/version"
 
 VERSION := $(shell head -n1 VERSION)
-COMMON_BUILD_ARGS := --build-arg FME_PROXY_VERSION="$(VERSION)"
 
 default: help
 
 ## Build docker image (accepts OS=[ubuntu|redhat]
 docker-build:
-	$(DOCKER) build $(COMMON_BUILD_ARGS) -t fme-proxy:$(OS)-$(VERSION) -f $(OS)/Dockerfile .
+	$(DOCKER) build -t fme-proxy:$(OS)-$(VERSION) -f $(OS)/Dockerfile .
 
 ## Run previously built docker image (accepts LOCAL_<server>_PORT to change the local binding)
 docker-run:
@@ -25,7 +24,7 @@ docker-run:
 		--rm \
 		--name fme-proxy-$(OS)-$(VERSION) \
 		-p "8080:80" \
-		-p "$(LOCAL_PLAIN_PORT):3127)" \
+		-p "$(LOCAL_PLAIN_PORT):3127" \
 		-p "$(LOCAL_TLS_PORT):3128" \
 		-p "$(LOCAL_MTLS_PORT):3129" \
 		-p "$(LOCAL_BASIC_PORT):3130" \
@@ -122,7 +121,6 @@ images_release:
 	$(DOCKER) buildx build  \
 		--builder xbuilder \
 		--platform $(PLATFORM) \
-		$(COMMON_BUILD_ARGS) \
 		-t splitsoftware/fme-proxy:latest \
 		-t splitsoftware/fme-proxy:ubuntu-latest \
 		-t splitsoftware/fme-proxy:$(VERSION) \
@@ -132,7 +130,6 @@ images_release:
 	$(DOCKER) buildx build  \
 		--builder xbuilder \
 		--platform $(PLATFORM) \
-		$(COMMON_BUILD_ARGS) \
 		-t splitsoftware/fme-proxy:redhat-latest \
 		-t splitsoftware/fme-proxy:redhat-$(VERSION) \
 		--push \

@@ -1,7 +1,5 @@
 FROM redhat/ubi10:latest as builder
 
-ARG FME_PROXY_VERSION
-
 ENV OPENRESTY_VERSION 1.27.1.2
 ENV OPENRESTY_NGINX_CORE_VERSION 1.27.1
 ENV OPENRESTY_NGX_CONNECT_PATCH_VERSION 102101
@@ -87,8 +85,6 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 
 FROM redhat/ubi10:latest as runner
 
-ARG FME_PROXY_VERSION
-
 ENV OPENRESTY_VERSION 1.27.1.2
 ENV OPENRESTY_DIST_SUFFIX harness
 
@@ -116,7 +112,7 @@ RUN mkdir -p /var/run/nginx
 RUN mkdir -p /etc/nginx/lua
 
 # setup version
-RUN echo "${FME_PROXY_VERSION}" > /.version
+COPY VERSION /.version
 
 # setup running user
 RUN groupadd --system --gid 101 nginx

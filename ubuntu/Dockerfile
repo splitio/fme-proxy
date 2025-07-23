@@ -1,7 +1,5 @@
 FROM ubuntu:24.04 AS builder
 
-ARG FME_PROXY_VERSION
-
 ENV OPENRESTY_VERSION 1.27.1.2
 ENV OPENRESTY_DIST_SUFFIX harness
 
@@ -68,7 +66,6 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 
 FROM ubuntu:24.04 AS runner
 
-ARG FME_PROXY_VERSION
 
 ENV OPENRESTY_VERSION 1.27.1.2
 ENV OPENRESTY_DIST_SUFFIX harness
@@ -102,7 +99,7 @@ COPY lua /opt/openresty/lua
 COPY scripts /opt/openresty/scripts
 
 # setup version
-RUN echo "${FME_PROXY_VERSION}" > /.version
+COPY VERSION /.version
 
 # setup running user
 RUN groupadd --system --gid 101 nginx
