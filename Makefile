@@ -2,6 +2,7 @@ DOCKER ?= docker
 CURL ?= curl
 OS ?= ubuntu
 PLATFORM ?= linux/arm64/v8,linux/amd64
+LOCAL_PLAIN_PORT ?= 3127
 LOCAL_TLS_PORT ?= 3128
 LOCAL_MTLS_PORT ?= 3129
 LOCAL_BASIC_PORT ?= 3130
@@ -24,14 +25,16 @@ docker-run:
 		--rm \
 		--name fme-proxy-$(OS)-$(VERSION) \
 		-p "8080:80" \
+		-p "$(LOCAL_PLAIN_PORT):3127)" \
 		-p "$(LOCAL_TLS_PORT):3128" \
 		-p "$(LOCAL_MTLS_PORT):3129" \
 		-p "$(LOCAL_BASIC_PORT):3130" \
 		-p "$(LOCAL_BEARER_PORT):3131" \
 		-p "$(LOCAL_DIGEST_PORT):3132" \
 		-e TZ="UTC" \
-		-e HFP_PROXIES=tls,mtls,basic,digest,bearer \
+		-e HFP_PROXIES=plain,tls,mtls,basic,digest,bearer \
 		-e HFP_DEBUG_CONF="true" \
+		-e HFP_plain_PORT=3127 \
 		-e HFP_tls_PORT=3128 \
 		-e HFP_tls_SSL="true" \
 		-e HFP_tls_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \

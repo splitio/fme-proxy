@@ -113,12 +113,8 @@ read -r -d '' TARGET_WHITELIST_BLOCK << "EOF"
         access_by_lua_block {
 
             local target = ngx.req.get_headers()["Host"]
-            ngx.log(ngx.STDERR, 'Incoming host header: <' .. target .. '>')
-            if ngx.var.request_uri then
-                ngx.log(ngx.STDERR, 'Request uri: <' .. ngx.var.request_uri .. '>')
-            end
             if string.find(target, ':') == nil then
-                target = target .. "80"
+                target = target .. ":80"
             end
 
             local allowed_hosts = require "host_whitelist_{{NAME}}".whitelist
