@@ -115,7 +115,7 @@ read -r -d '' TARGET_WHITELIST_BLOCK << "EOF"
             local target = ngx.req.get_headers()["Host"]
             if string.find(target, ':') == nil then
                 local raw_headers = ngx.req.raw_header()
-                local request_line = string.sub(raw_headers, 0, string.find(raw_headers), "\\\\r\\\\n")
+                local request_line = string.sub(raw_headers, 0, string.find(raw_headers, "\\\\r\\\\n"))
                 target = string.match(request_line, "CONNECT (.*:%d+) .*")
             end
 
