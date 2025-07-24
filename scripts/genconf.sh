@@ -153,7 +153,7 @@ function gen_server_section() {
     local port=$(get_var ${id} PORT)
     [ -z "${port}" ] && log_error "Server '${id}' is missing port, which is mandatory. Aborting" && abort
 
-    target_ports="443"
+    target_ports="80,443"
     local tpr=$(get_var ${id} ALLOWED_TARGET_PORTS)
     if [ ! -z "${tpr}" ]; then
         target_ports=$(tr ',' ' ' <<< "${tpr}")

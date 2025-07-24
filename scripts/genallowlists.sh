@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DEFAULT_ALLOWED_TARGETS="sdk.split.io:443,auth.split.io:443,streaming.split.io:443,events.split.io:443,telemetry.split.io:443"
+DEFAULT_ALLOWED_TARGETS="sdk.split.io:443,auth.split.io:443,streaming.split.io:443,events.split.io:443,telemetry.split.io:443,app.harness.io:80,app.harness.io:443,logging.googleapis.com:443"
 LUA_OUTPUT_PATH="${LUA_OUTPUT_PATH:-/etc/nginx/lua}"
 
 
