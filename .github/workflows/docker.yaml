@@ -66,11 +66,12 @@ jobs:
       #      ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}-${{ matrix.os }}:${{ env.VERSION }}
       #      ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}-${{ matrix.os }}:latest
 
-      - name: Docker Build and Push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.os }}/Dockerfile
-          push: ${{ github.event_name == 'push' }}
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ matrix.os == 'ubuntu' && env.TAGS_UBUNTU || env.TAGS_REDHAT }}
+      # Disable push until fixed
+      #- name: Docker Build and Push
+      #  uses: docker/build-push-action@v6
+      #  with:
+      #    context: .
+      #    file: ${{ matrix.os }}/Dockerfile
+      #    push: ${{ github.event_name == 'push' }}
+      #    platforms: linux/amd64,linux/arm64
+      #    tags: ${{ matrix.os == 'ubuntu' && env.TAGS_UBUNTU || env.TAGS_REDHAT }}
