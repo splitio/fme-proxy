@@ -43,14 +43,15 @@ RUN bzip2 -d jansson-2.14.tar.bz2 && tar xvf jansson-2.14.tar
 RUN pushd jansson-2.14 && ./configure && make && make install && popd
 
 # 3. connect module
-RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
+RUN git clone https://github.com/mredolatti/ngx_http_proxy_connect_module.git
+RUN cd ngx_http_proxy_connect_module && git checkout 45a91e6 
 
 # 4. jwt auth module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
 
 # 5. digest auth module
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
-RUN cd nginx-http-auth-digest && git checkout ngx_proxy_connect_support
+RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. openresty
 RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
@@ -97,13 +98,33 @@ RUN tar xvzf openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 RUN ln -s /usr/luajit/lib/libluajit-5.1.so.2.1.ROLLING /usr/local/lib/libluajit-5.1.so.2
 
 # setup logging
-RUN mkdir -p /var/{run,log/nginx}
+RUN bash -c 'mkdir -p /var/{run,log/nginx}'
 RUN ln -s /dev/stdout /var/log/nginx/access.log
 RUN ln -s /dev/stderr /var/log/nginx/error.log
 
 # copy custom configs & scripts
+RUN bash -c 'mkdir -p /etc/nginx/{conf,credentials}'
 COPY conf /opt/openresty/conf
 COPY lua /opt/openresty/lua
 COPY scripts /opt/openresty/scripts
+
+RUN mkdir -p /var/run/nginx
+RUN mkdir -p /etc/nginx/lua
+
+# setup version
+COPY VERSION /.version
+
+# setup running user
+RUN groupadd --system --gid 101 nginx
+RUN useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx
+RUN chown -R :nginx /var/log/nginx
+RUN chown -R :nginx /opt/openresty
+RUN chown -R :nginx /etc/nginx
+RUN chown -R :nginx /var/run/nginx
+RUN chmod -R g+rwx /etc/nginx
+RUN chmod g+x /opt/openresty/scripts/entrypoint.sh
+RUN chmod g+x /opt/openresty/sbin/nginx
+RUN chmod g+rw /var/run/nginx
+USER nginx
 
 ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]
