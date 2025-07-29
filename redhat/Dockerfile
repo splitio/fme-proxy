@@ -114,17 +114,14 @@ RUN mkdir -p /etc/nginx/lua
 # setup version
 COPY VERSION /.version
 
-# setup running user
-RUN groupadd --system --gid 101 nginx
-RUN useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx
-RUN chown -R :nginx /var/log/nginx
-RUN chown -R :nginx /opt/openresty
-RUN chown -R :nginx /etc/nginx
-RUN chown -R :nginx /var/run/nginx
-RUN chmod -R g+rwx /etc/nginx
-RUN chmod g+x /opt/openresty/scripts/entrypoint.sh
-RUN chmod g+x /opt/openresty/sbin/nginx
-RUN chmod g+rw /var/run/nginx
-USER nginx
+# setup group permissions
+RUN chown -R :root /var/log/nginx
+RUN chown -R :root /opt/openresty
+RUN chown -R :root /etc/nginx
+RUN chown -R :root /var/run/nginx
+RUN chmod -R g=u /etc/nginx
+RUN chmod -R g=u /opt/openresty
+RUN chmod -R g=u /var/log/nginx
+RUN chmod -R g=u /var/run/nginx
 
 ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]
