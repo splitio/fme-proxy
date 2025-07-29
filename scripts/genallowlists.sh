@@ -30,7 +30,7 @@ function generate_host_whitelist() {
         allowed_raw="${DEFAULT_ALLOWED_TARGETS}"
     fi
     
-    local allowed_ports=("443")
+    local allowed_ports=("80" "443")
     local allowed_ports_raw=$(get_var "${id}" ALLOWED_TARGET_PORTS)
     if [ ! -z "${allowed_ports_raw}" ]; then
         IFS=',' read -r -a allowed_ports <<< "${allowed_ports_raw}"

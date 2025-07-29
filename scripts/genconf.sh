@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+############## errors
+readonly ERR_NO_SERVERS=100
+readonly ERR_NO_PORT=101
+readonly ERR_SSL_NO_KEY=110
+readonly ERR_SSL_NO_CERT=111
+readonly ERR_SSL_NO_CLIENT_CERT=112
+readonly ERR_AUTH_INVALID_SCHEME=120
+readonly ERR_AUTH_NO_BASIC_PASSWD=121
+readonly ERR_AUTH_NO_DIGEST_PASSWD=123
+readonly ERR_AUTH_NO_BEARER_JWKS=123
+readonly ERR_CHAIN_NO_PROXY_CACERT=130
+##############
+
 ############## templates declaration
 
 IFS_BAK=${IFS}
@@ -29,7 +42,7 @@ http {
     uwsgi_temp_path /tmp/uwsgi_temp;
     scgi_temp_path /tmp/scgi_temp;
 
-    lua_package_path "/etc/nginx/lua/?.lua;;";
+    lua_package_path "/etc/nginx/lua/?.lua;/opt/openresty/lua/?.lua;;";
 {{TARGET_WHITELIST_INIT_BLOCK}}
 
     # version 
@@ -105,28 +118,15 @@ EOF
 
 read -r -d '' TARGET_WHITELIST_INIT_BLOCK << "EOF"
     init_by_lua_block {
+        require "host_access_control"
 {{REQUIRE_LIST}}
     }
 EOF
 
 read -r -d '' TARGET_WHITELIST_BLOCK << "EOF"
         access_by_lua_block {
-
-            local target = ngx.req.get_headers()["Host"]
-            if string.find(target, ':') == nil then
-                local raw_headers = ngx.req.raw_header()
-                local request_line = string.sub(raw_headers, 0, string.find(raw_headers, "\\\\r\\\\n"))
-                target = string.match(request_line, "CONNECT (.*:%d+) .*")
-            end
-
-            local allowed_hosts = require "host_whitelist_{{NAME}}".whitelist
-            for i, v in ipairs(allowed_hosts) do
-                if target == v then
-                    return
-                end
-            end
-
-            ngx.exit(ngx.HTTP_FORBIDDEN)
+            local allowed_hosts = require "host_whitelist_{{NAME}}".whitelist;
+            require "host_access_control".fail_if_host_not_allowed(allowed_hosts)
         }
 EOF
 
@@ -151,29 +151,41 @@ function gen_server_section() {
     local id="${1}"
 
     local port=$(get_var ${id} PORT)
-    [ -z "${port}" ] && log_error "Server '${id}' is missing port, which is mandatory. Aborting" && abort
+    [ -z "${port}" ] && log_error "Server '${id}' is missing port, which is mandatory. Aborting" && return "${ERR_NO_PORT}"
 
-    target_ports="80,443"
+    local target_ports="80,443"
     local tpr=$(get_var ${id} ALLOWED_TARGET_PORTS)
     if [ ! -z "${tpr}" ]; then
         target_ports=$(tr ',' ' ' <<< "${tpr}")
     fi
 
-    target_whitelist_block=""
-    target_whitelist_raw=$(get_var "${id}" ALLOWED_TARGETS)
+    local target_whitelist_block=""
+    local target_whitelist_raw=$(get_var "${id}" ALLOWED_TARGETS)
     if [[ ${target_whitelist_block} != "*" ]]; then
         target_whitelist_block=$(${AWK} -v name="${id}" '{ sub("{{NAME}}", name); };1' <<< "${TARGET_WHITELIST_BLOCK}")
     fi
 
-
+    local ssl
+    local ssl_block
     if [[ $(get_var ${id} SSL) == "true" ]]; then
-        local ssl="ssl"
-        ssl_block=$(gen_ssl_block ${id})
+        ssl="ssl"
+        ssl_block=$(gen_ssl_block ${id}); ret=${?}
+        if [ ${ret} -ne 0 ]; then
+            return "${ret}"
+        fi
     fi
 
-    auth_block=$(gen_auth_block ${id})
-    proxy_chain_block=$(gen_proxy_chain_block "${id}")
-    resolver=$(get_var "${id}" RESOLVER_IP)
+    local auth_block=$(gen_auth_block ${id}); ret=${?}
+    if [ ${ret} -ne 0 ]; then
+        return "${ret}"
+    fi
+
+    local proxy_chain_block=$(gen_proxy_chain_block "${id}")
+    if [ ${ret} -ne 0 ]; then
+        return "${ret}"
+    fi
+
+    local resolver=$(get_var "${id}" RESOLVER_IP)
     if [ -z "${resolver}" ]; then
         resolver="8.8.8.8"
     fi
@@ -199,10 +211,10 @@ function gen_ssl_block() {
     [ -z $(get_var ${id} SSL) ] && return 0 # should not happen but just in case
     
     private_key=$(get_var "${id}" SSL_PRIVATE_KEY)
-    [ -z "${private_key}" ] && log_error "server '${id}' has ssl enabled but no private key was provided" && abort
+    [ -z "${private_key}" ] && log_error "server '${id}' has ssl enabled but no private key was provided" && return "${ERR_SSL_NO_KEY}"
 
     certificate=$(get_var "${id}" SSL_CERTIFICATE)
-    [ -z "${certificate}" ] && log_error "server '${id}' has ssl enabled but no certificate was provided" && abort
+    [ -z "${certificate}" ] && log_error "server '${id}' has ssl enabled but no certificate was provided" && return "${ERR_SSL_NO_CERT}"
 
     local client_validation_cert="$(get_var ${id} SSL_CLIENT_CERTIFICATE)"
     if [ ! -z ${client_validation_cert} ]; then
@@ -224,8 +236,12 @@ function gen_proxy_chain_block() {
 
     [[ -z $(get_var "${id}" PROXY_CHAIN) ]] && return 0
     local proxy_url=$(get_var "${id}" PROXY_CHAIN)
+    local proxy_chain_ssl_block
     if [ ! -z $(get_var "${id}" PROXY_CHAIN_SSL) ]; then
-        proxy_chain_ssl_block=$(gen_proxy_chain_ssl_block "${id}")
+        proxy_chain_ssl_block=$(gen_proxy_chain_ssl_block "${id}"); ret=${?}
+        if [ ${ret} -ne 0 ]; then
+            return "${ret}"
+        fi
     fi
     
    ${AWK} -v proxy_url="${proxy_url}" -v pcssl="${proxy_chain_ssl_block}" \
@@ -239,7 +255,7 @@ function gen_proxy_chain_ssl_block() {
     id="${1}"
     [[ -z $(get_var "${id}" PROXY_CHAIN_CA_CERT) ]] && \
         log_error "CA cert for nested proxy verification is mandatory is proxy chain ssl is enabled" && \
-        abort
+        return "${ERR_CHAIN_NO_PROXY_CACERT}"
 
     ssl_cert=$(get_var "${id}" PROXY_CHAIN_CA_CERT)
     ${AWK} -v certificate="${ssl_cert}" \ 
@@ -253,24 +269,24 @@ function gen_auth_block() {
     case "${scheme}" in
         basic)
             fn="$(get_var ${id} AUTH_BASIC_PASSWD)"
-            [ -z "${fn}" ] && log_error "PASSWD file is mandatory for basic auth in server '${id}'" && abort
+            [ -z "${fn}" ] && log_error "PASSWD file is mandatory for basic auth in server '${id}'" && return "${ERR_AUTH_NO_BASIC_PASSWD}"
             ${AWK} -v fn="${fn}" '{sub("{{BASIC_AUTH_PASSWD}}", fn)};1' <<< "${BASIC_AUTH_BLOCK}"
             ;;
         digest)
             fn="$(get_var ${id} AUTH_DIGEST_PASSWD)"
-            [ -z "${fn}" ] && log_error "PASSWD file is mandatory for digest auth in server '${id}'" && abort
+            [ -z "${fn}" ] && log_error "PASSWD file is mandatory for digest auth in server '${id}'" && return "${ERR_AUTH_NO_DIGEST_PASSWD}"
             ${AWK} -v fn="${fn}" '{sub("{{DIGEST_AUTH_PASSWD}}", fn)};1' <<< "${DIGEST_AUTH_BLOCK}"
             ;;
         bearer)
             fn="$(get_var ${id} AUTH_BEARER_JWKS)"
-            [ -z "${fn}" ] && log_error "JWKS file is mandatory for bearer auth in server '${id}'" && abort
+            [ -z "${fn}" ] && log_error "JWKS file is mandatory for bearer auth in server '${id}'" && return "${ERR_AUTH_NO_BEARER_JWKS}"
             ${AWK} -v fn="${fn}" '{sub("{{BEARER_AUTH_JWKS}}", fn)};1' <<< "${BEARER_AUTH_BLOCK}"
             ;;
         "")
             # No auth scheme, empty string is fine
             ;;
         *)
-            log_error "invalid auth scheme: '${scheme}' in server '${id}'" && abort
+            log_error "invalid auth scheme: '${scheme}' in server '${id}'" && return "${ERR_AUTH_INVALID_SCHEME}"
     esac
 }
 
@@ -290,25 +306,32 @@ function gen_target_whitelist_init_block() {
 
 ############## main execution flow
 
+HFP_VERSION_FILE="${HFP_VERSION_FILE:-/.version}"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 source "${SCRIPT_DIR}/commons.sh"
 
 # ensure minimal config is supplied
-[ -z "${HFP_PROXIES}" ] && log_error "HFP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" && abort
+[ -z "${HFP_PROXIES}" ] && log_error "HFP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" && exit "${ERR_NO_SERVERS}"
 
 server_definitions=""
 while read -r -d ',' sid; do
-    server_definitions="${server_definitions}\n$(gen_server_section ${sid})"
+    server_definitions="${server_definitions}\n$(gen_server_section ${sid})"; ret=${?}
+    if [ ${ret} -ne 0 ]; then
+        exit ${ret}
+    fi
 done <<< "${HFP_PROXIES},"
 
-whitelist_init=
+whitelist_init=$(gen_target_whitelist_init_block)
+if [ ${ret} -ne 0 ]; then
+    exit ${ret}
+fi
 
 ${AWK} \
-    -v version="$(head -n1 /.version)" \
+    -v version="$(head -n1 ${HFP_VERSION_FILE})" \
     -v processes="${HFP_WORKER_PROCESSES:-4}" \
     -v connections="${HFP_WORKER_CONNECTIONS:-1024}" \
     -v servers="${server_definitions}" \
-    -v whinit="$(gen_target_whitelist_init_block)" \
+    -v whinit="${whitelist_init}" \
     -v loglevel="${HFP_LOG_LEVEL:-info}" \
     '{
         sub("{{VERSION}}",version);
