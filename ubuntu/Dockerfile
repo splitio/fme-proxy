@@ -1,7 +1,9 @@
 FROM ubuntu:24.04 AS builder
 
-ENV OPENRESTY_VERSION 1.27.1.2
-ENV OPENRESTY_DIST_SUFFIX harness
+ENV OPENRESTY_VERSION="1.27.1.2"
+ENV OPENRESTY_NGINX_CORE_VERSION="1.27.1"
+ENV OPENRESTY_NGX_CONNECT_PATCH_VERSION="102101"
+ENV OPENRESTY_DIST_SUFFIX="harness"
 
 # setup build capabilities & enable source package retrieval
 RUN apt update -y
@@ -28,8 +30,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt remove --purge --auto-remove -y
 # 1.nginx
 RUN mkdir -p /tmp/openresty
 WORKDIR /tmp/openresty
-RUN wget https://openresty.org/download/openresty-1.25.3.2.tar.gz
-RUN tar xvzf openresty-1.25.3.2.tar.gz
+RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
+RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
 # 2.connect module
 RUN git clone https://github.com/mredolatti/ngx_http_proxy_connect_module.git
 RUN cd ngx_http_proxy_connect_module && git checkout 45a91e6 
@@ -40,7 +42,7 @@ RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
 RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # build openresty with support for modules above
-WORKDIR /tmp/openresty/openresty-1.25.3.2
+WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
     --add-module=../ngx_http_proxy_connect_module \
     --add-module=../nginx-auth-jwt \
@@ -50,7 +52,9 @@ RUN ./configure \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
     --http-log-path=/var/log/nginx/error.log
-RUN patch -d build/nginx-1.25.3/ -p 1 < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_102101.patch
+RUN patch -d build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
+    -p 1 \
+    < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_${OPENRESTY_NGX_CONNECT_PATCH_VERSION}.patch
 RUN make
 RUN make install
 RUN make DESTDIR=/tmp/openresty-bin install
@@ -67,8 +71,8 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 FROM ubuntu:24.04 AS runner
 
 
-ENV OPENRESTY_VERSION 1.27.1.2
-ENV OPENRESTY_DIST_SUFFIX harness
+ENV OPENRESTY_VERSION="1.27.1.2"
+ENV OPENRESTY_DIST_SUFFIX="harness"
 
 RUN apt update -y
 RUN apt full-upgrade -y
