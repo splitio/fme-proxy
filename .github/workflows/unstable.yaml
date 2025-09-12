@@ -51,6 +51,14 @@ jobs:
       - name: Get short hash
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+      - name: Setup .netrc with permissions for private repos (Go dependencies)
+        uses: danielr1996/envsubst-action@1.1.0
+        env:
+          TOKEN: ${{ secrets.DEVOPS_READONLY_GITHUB_TOKEN }}
+        with:
+          input: .netrc.tpl
+          output: .netrc
+
       - name: Docker Build and Push
         uses: docker/build-push-action@v6
         with:

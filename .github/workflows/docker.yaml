@@ -61,6 +61,16 @@ jobs:
         run: |
           echo 'TAGS_UBUNTU=splitsoftware/fme-proxy:latest,splitsoftware/fme-proxy:${{env.VERSION}},splitsoftware/fme-proxy:ubuntu-latest,splitsoftware/fme-proxy:ubuntu-${{ env.VERSION }}' >> $GITHUB_ENV
           echo 'TAGS_REDHAT=splitsoftware/fme-proxy:redhat-latest,splitsoftware/fme-proxy:redhat-${{ env.VERSION }}' >> $GITHUB_ENV
+
+      - name: Setup .netrc with permissions for private repos (Go dependencies)
+        uses: danielr1996/envsubst-action@1.1.0
+        env:
+          TOKEN: ${{ secrets.DEVOPS_READONLY_GITHUB_TOKEN }}
+        with:
+          input: .netrc.tpl
+          output: .netrc
+
+
       # TODO(mredolatti):
       # add the following tags if we want tagged versions in stage
       #      ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}-${{ matrix.os }}:${{ env.VERSION }}
