@@ -10,7 +10,7 @@ readonly ERR_AUTH_INVALID_SCHEME=120
 readonly ERR_AUTH_NO_BASIC_PASSWD=121
 readonly ERR_AUTH_NO_DIGEST_PASSWD=123
 readonly ERR_AUTH_NO_BEARER_JWKS=123
-readonly ERR_CHAIN_NO_PROXY_CACERT=130
+readonly ERR_THRU_NO_PROXY_CACERT=130
 ##############
 
 ############## templates declaration
@@ -75,7 +75,7 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
         proxy_connect_connect_timeout  10s;
         proxy_connect_data_timeout     120s; # 2x SSE keep-alive
 
-{{PROXY_CHAIN_BLOCK}}
+{{PROXY_THRU_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
     }
 EOF
@@ -130,16 +130,16 @@ read -r -d '' TARGET_WHITELIST_BLOCK << "EOF"
         }
 EOF
 
-read -r -d '' PROXY_CHAIN_BLOCK <<"EOF"
-        proxy_connect_chain_proxy      {{NEXT_PROXY_HOST}};
-{{PROXY_CHAIN_SSL_BLOCK}}
+read -r -d '' PROXY_THRU_BLOCK <<"EOF"
+        proxy_thru      {{NEXT_PROXY_HOST}};
+{{PROXY_THRU_SSL_BLOCK}}
 
 EOF
 
-read -r -d '' PROXY_CHAIN_SSL_BLOCK << "EOF"
-        proxy_connect_chain_proxy_ssl;
-        proxy_connect_chain_proxy_ssl_verify;
-        proxy_connect_chain_proxy_ssl_verify_cert {{PROXY_CHAIN_SSL_CERT}};
+read -r -d '' PROXY_THRU_SSL_BLOCK << "EOF"
+        proxy_thru_ssl;
+        proxy_thru_ssl_verify;
+        proxy_thru_ssl_verify_cert {{PROXY_THRU_SSL_CERT}};
 
 EOF
 
@@ -180,7 +180,7 @@ function gen_server_section() {
         return "${ret}"
     fi
 
-    local proxy_chain_block=$(gen_proxy_chain_block "${id}")
+    local proxy_thru_block=$(gen_proxy_thru_block "${id}")
     if [ ${ret} -ne 0 ]; then
         return "${ret}"
     fi
@@ -191,7 +191,7 @@ function gen_server_section() {
     fi
 
     ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v auth_block="${auth_block}" \
-        -v proxy_chain_block="${proxy_chain_block}" -v resolver="${resolver}" -v target_ports="${target_ports}" \
+        -v proxy_thru_block="${proxy_thru_block}" -v resolver="${resolver}" -v target_ports="${target_ports}" \
         -v target_whitelist_block="${target_whitelist_block}" \
         '{
             sub("{{NAME}}", id);
@@ -200,7 +200,7 @@ function gen_server_section() {
             sub("{{SSL}}", ssl);
             sub("{{SSL_BLOCK}}", ssl_block);
             sub("{{AUTH_BLOCK}}", auth_block);
-            sub("{{PROXY_CHAIN_BLOCK}}", proxy_chain_block);
+            sub("{{PROXY_THRU_BLOCK}}", proxy_thru_block);
             sub("{{RESOLVER}}", resolver);
             sub("{{HOST_WHITELIST_BLOCK}}", target_whitelist_block);
         };1' <<< "${SERVER_DEFINITION}"
@@ -231,36 +231,36 @@ function gen_ssl_block() {
     };1' <<< "${SSL_BLOCK}"
 }
 
-function gen_proxy_chain_block() {
+function gen_proxy_thru_block() {
     local id="${1}"
 
-    [[ -z $(get_var "${id}" PROXY_CHAIN) ]] && return 0
-    local proxy_url=$(get_var "${id}" PROXY_CHAIN)
-    local proxy_chain_ssl_block
-    if [ ! -z $(get_var "${id}" PROXY_CHAIN_SSL) ]; then
-        proxy_chain_ssl_block=$(gen_proxy_chain_ssl_block "${id}"); ret=${?}
+    [[ -z $(get_var "${id}" PROXY_THRU) ]] && return 0
+    local proxy_url=$(get_var "${id}" PROXY_THRU)
+    local proxy_thru_ssl_block
+    if [ ! -z $(get_var "${id}" PROXY_THRU_SSL) ]; then
+        proxy_thru_ssl_block=$(gen_proxy_thru_ssl_block "${id}"); ret=${?}
         if [ ${ret} -ne 0 ]; then
             return "${ret}"
         fi
     fi
     
-   ${AWK} -v proxy_url="${proxy_url}" -v pcssl="${proxy_chain_ssl_block}" \
+   ${AWK} -v proxy_url="${proxy_url}" -v pcssl="${proxy_thru_ssl_block}" \
    '{
        sub("{{NEXT_PROXY_HOST}}", proxy_url);
-       sub("{{PROXY_CHAIN_SSL_BLOCK}}", pcssl);
-   };1' <<< "${PROXY_CHAIN_BLOCK}"
+       sub("{{PROXY_THRU_SSL_BLOCK}}", pcssl);
+   };1' <<< "${PROXY_THRU_BLOCK}"
 }
 
-function gen_proxy_chain_ssl_block() {
+function gen_proxy_thru_ssl_block() {
     id="${1}"
-    [[ -z $(get_var "${id}" PROXY_CHAIN_CA_CERT) ]] && \
-        log_error "CA cert for nested proxy verification is mandatory is proxy chain ssl is enabled" && \
-        return "${ERR_CHAIN_NO_PROXY_CACERT}"
+    [[ -z $(get_var "${id}" PROXY_THRU_CA_CERT) ]] && \
+        log_error "CA cert for nested proxy verification is mandatory is proxy thru ssl is enabled" && \
+        return "${ERR_THRU_NO_PROXY_CACERT}"
 
-    ssl_cert=$(get_var "${id}" PROXY_CHAIN_CA_CERT)
+    ssl_cert=$(get_var "${id}" PROXY_THRU_CA_CERT)
     ${AWK} -v certificate="${ssl_cert}" \ 
-        '{ sub("{{PROXY_CHAIN_SSL_CERT}}", certificate); };1' \
-        <<< "${PROXY_CHAIN_SSL_BLOCK}"
+        '{ sub("{{PROXY_THRU_SSL_CERT}}", certificate); };1' \
+        <<< "${PROXY_THRU_SSL_BLOCK}"
 }
 
 function gen_auth_block() {
