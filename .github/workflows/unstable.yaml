@@ -67,7 +67,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.os }}/Dockerfile
-          tags: ${{ env.REGISTRY_IMAGE }}/${{ matrix.os }}
+          tags: ${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
