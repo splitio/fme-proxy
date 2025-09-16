@@ -16,7 +16,7 @@ jobs:
 
   build-image:
     name: Build armv8 image
-    runs-on: ${{ platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm64' }}
+    runs-on: ${{ platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm-large' }}
     matrix:
       os:
         - redhat
