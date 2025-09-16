@@ -26,10 +26,6 @@ jobs:
           - linux/amd64
           - linux/arm64
     steps:
-      - name: "aa"
-        run: |
-          echo "hola"
-
 
       - name: Prepare
         run: |
@@ -61,6 +57,10 @@ jobs:
         with:
           input: .netrc.tpl
           output: .netrc
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
 
       - name: Build and push by digest
         id: build
