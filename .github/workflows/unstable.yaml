@@ -15,15 +15,17 @@ env:
 jobs:
 
   build-image:
-    name: Build armv8 image
-    runs-on: ${{ platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm-large' }}
-    matrix:
-      os:
-        - redhat
-        - ubuntu
-      platform:
-        - linux/amd64
-        - linux/arm64
+    name: Build multi-platform image
+    strategy:
+      matrix:
+        os:
+          - redhat
+          - ubuntu
+        platform:
+          - linux/amd64
+          - linux/arm64
+
+    runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm-large' }}
 
     steps:
       - name: Prepare
