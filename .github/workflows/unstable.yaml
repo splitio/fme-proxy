@@ -10,9 +10,7 @@ permissions:
   id-token: write
 
 env:
-  # TODO: rename repo in ecr?
-  #REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}
-  REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/fme-forward-proxy
+  REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}
 
 jobs:
 
@@ -69,7 +67,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.os }}/Dockerfile
-          tags: ${{ env.REGISTRY_IMAGE }}
+          tags: ${{ env.REGISTRY_IMAGE }}/${{ matrix.os }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
