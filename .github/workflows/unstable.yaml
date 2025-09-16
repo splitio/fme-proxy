@@ -10,7 +10,9 @@ permissions:
   id-token: write
 
 env:
-  REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}
+  # TODO: rename repo in ecr?
+  #REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}
+  REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/fme-forward-proxy
 
 jobs:
 
