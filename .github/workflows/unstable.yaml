@@ -49,6 +49,13 @@ jobs:
       - name: Get short hash
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}::
+          tags: type=sha
+
       # TODO(mredolatti): remove once all repos are public
       - name: Setup .netrc with permissions for private repos (Go dependencies)
         uses: danielr1996/envsubst-action@1.1.0
@@ -67,7 +74,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.os }}/Dockerfile
-          tags: ${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}:${{ env.SHORT_SHA }}
+          tags: ${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}:
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
@@ -98,7 +105,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/${{ matrix.os }}/digests
-          pattern: digests-*
+          pattern: digests-${{ matrix.os }}-*
           merge-multiple: true
 
       - name: Configure AWS credentials
@@ -115,14 +122,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Get short hash
-        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}
+          tags: type=sha
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/${{ matrix.os }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}:${{ env.SHORT_SHA }}@sha256:%s ' *)
+            $(printf '${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
