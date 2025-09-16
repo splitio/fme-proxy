@@ -72,15 +72,15 @@ jobs:
 
       - name: Export digest
         run: |
-          mkdir -p ${{ runner.temp }}/digests
+          mkdir -p ${{ runner.temp }}/${{ matrix.os }}/digests
           digest="${{ steps.build.outputs.digest }}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+          touch "${{ runner.temp }}/${{ matrix.os }}/digests/${digest#sha256:}"
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
-          path: ${{ runner.temp }}/digests/*
+          name: digests-${{ matrix.os }}-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/${{ matrix.os }}/digests/*
           if-no-files-found: error
           retention-days: 1
 
