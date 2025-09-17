@@ -42,6 +42,10 @@ http {
     uwsgi_temp_path /tmp/uwsgi_temp;
     scgi_temp_path /tmp/scgi_temp;
 
+    server_tokens off;
+    proxy_hide_header X-Runtime;
+    proxy_hide_header X-Powered-By;
+
     lua_package_path "/etc/nginx/lua/?.lua;/opt/openresty/lua/?.lua;;";
 {{TARGET_WHITELIST_INIT_BLOCK}}
 
@@ -52,6 +56,9 @@ http {
             default_type text/plain;
             content_by_lua_block { ngx.say("{{VERSION}}") }
         }
+
+{{ERROR_HANDLING_BLOCK}}
+
     }
 {{SERVER_DEFINITIONS}}
 
@@ -77,6 +84,8 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
 
 {{PROXY_THRU_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
+
+{{ERROR_HANDLING_BLOCK}}
     }
 EOF
 
@@ -143,7 +152,18 @@ read -r -d '' PROXY_THRU_SSL_BLOCK << "EOF"
 
 EOF
 
+read -r -d '' ERROR_HANDLING_BLOCK << "EOF"
+        location /error_handler {
+            internal;
+            local res = ngx.location.capture(ngx.var.uri);
+            ngx.say(res.status);
+        }
+
+        error_page 400 401 403 404 405 500 501 502 503 /error_handler;
+EOF
+
 IFS=${IFS_BAK}
+
 
 ############## internal functions
 
@@ -153,7 +173,7 @@ function gen_server_section() {
     local port=$(get_var ${id} PORT)
     [ -z "${port}" ] && log_error "Server '${id}' is missing port, which is mandatory. Aborting" && return "${ERR_NO_PORT}"
 
-    local target_ports="80,443"
+    local target_ports="80 443"
     local tpr=$(get_var ${id} ALLOWED_TARGET_PORTS)
     if [ ! -z "${tpr}" ]; then
         target_ports=$(tr ',' ' ' <<< "${tpr}")
