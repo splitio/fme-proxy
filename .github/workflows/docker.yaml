@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}
+  REGISTRY_IMAGE: splitsoftware/${{ github.event.repository.name }}
 
 jobs:
   bpsdh:
