@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 ############## errors
 readonly ERR_NO_SERVERS=100
 readonly ERR_NO_PORT=101
@@ -155,8 +157,10 @@ EOF
 read -r -d '' ERROR_HANDLING_BLOCK << "EOF"
         location /error_handler {
             internal;
-            local res = ngx.location.capture(ngx.var.uri);
-            ngx.say(res.status);
+            content_by_lua_block {
+                local res = ngx.location.capture(ngx.var.uri);
+                ngx.say(res.status);
+            }
         }
 
         error_page 400 401 403 404 405 500 501 502 503 /error_handler;
@@ -212,7 +216,7 @@ function gen_server_section() {
 
     ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v auth_block="${auth_block}" \
         -v proxy_thru_block="${proxy_thru_block}" -v resolver="${resolver}" -v target_ports="${target_ports}" \
-        -v target_whitelist_block="${target_whitelist_block}" err_handling_block="${ERROR_HANDLING_BLOCK}" \
+        -v target_whitelist_block="${target_whitelist_block}" -v err_handling_block="${ERROR_HANDLING_BLOCK}" \
         '{
             sub("{{NAME}}", id);
             sub("{{PORT}}", port);
