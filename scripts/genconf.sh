@@ -212,7 +212,7 @@ function gen_server_section() {
 
     ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v auth_block="${auth_block}" \
         -v proxy_thru_block="${proxy_thru_block}" -v resolver="${resolver}" -v target_ports="${target_ports}" \
-        -v target_whitelist_block="${target_whitelist_block}" \
+        -v target_whitelist_block="${target_whitelist_block}" err_handling_block="${ERROR_HANDLING_BLOCK}" \
         '{
             sub("{{NAME}}", id);
             sub("{{PORT}}", port);
@@ -223,6 +223,7 @@ function gen_server_section() {
             sub("{{PROXY_THRU_BLOCK}}", proxy_thru_block);
             sub("{{RESOLVER}}", resolver);
             sub("{{HOST_WHITELIST_BLOCK}}", target_whitelist_block);
+            sub("{{ERROR_HANDLING_BLOCK}}", err_handling_block);
         };1' <<< "${SERVER_DEFINITION}"
 }
 
@@ -353,12 +354,14 @@ ${AWK} \
     -v servers="${server_definitions}" \
     -v whinit="${whitelist_init}" \
     -v loglevel="${HFP_LOG_LEVEL:-info}" \
+    -v err_handling_block="${ERROR_HANDLING_BLOCK}" \
     '{
         sub("{{VERSION}}",version);
         sub("{{WORKER_PROCESSES}}",processes);
         sub("{{WORKER_CONNECTIONS}}",connections);
         sub("{{SERVER_DEFINITIONS}}",servers);
         sub("{{TARGET_WHITELIST_INIT_BLOCK}}", whinit); 
-        sub("{{LOG_LEVEL}}", loglevel); 
+        sub("{{LOG_LEVEL}}", loglevel);
+        sub("{{ERROR_HANDLING_BLOCK}}", err_handling_block);
     };1' \
     <<< "${BASE_CONF}"
