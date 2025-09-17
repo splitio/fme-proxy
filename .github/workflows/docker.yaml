@@ -131,7 +131,7 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/${{ matrix.os }}/digests
         run: |
-          docker buildx imagetools create (while read tag; do printf -- "-t ${tag} "; done <<<"${TAGS//,/$'\n'}") \
+          docker buildx imagetools create $(while read tag; do printf -- "-t ${tag} "; done <<<"${TAGS//,/$'\n'}") \
             $(printf '${{ env.REGISTRY_IMAGE }}-${{ matrix.os }}@sha256:%s ' *)
 
       - name: Inspect image
