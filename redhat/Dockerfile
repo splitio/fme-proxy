@@ -1,4 +1,4 @@
-FROM redhat/ubi10:latest as builder
+FROM redhat/ubi10:latest AS builder
 
 ENV OPENRESTY_VERSION="1.27.1.2"
 ENV OPENRESTY_NGINX_CORE_VERSION="1.27.1"
@@ -31,6 +31,9 @@ RUN yum -y clean all --enablerepo='*'
 RUN mkdir -p /tmp/openresty
 WORKDIR /tmp/openresty
 
+# TODO: REMOVE THIS ONCE proxy_thru repo is public
+COPY .netrc /root
+
 # 1. PCRE
 RUN wget https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.45/pcre2-${PCRE2_VERSION}.tar.bz2
 RUN bzip2 -d pcre2-${PCRE2_VERSION}.tar.bz2
@@ -43,8 +46,8 @@ RUN bzip2 -d jansson-2.14.tar.bz2 && tar xvf jansson-2.14.tar
 RUN pushd jansson-2.14 && ./configure && make && make install && popd
 
 # 3. connect module
-RUN git clone https://github.com/mredolatti/ngx_http_proxy_connect_module.git
-RUN cd ngx_http_proxy_connect_module && git checkout 45a91e6 
+RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
+RUN cd ngx_http_proxy_connect_module && git checkout v0.0.7
 
 # 4. jwt auth module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
@@ -53,14 +56,20 @@ RUN git clone https://github.com/kjdev/nginx-auth-jwt
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
 RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
-# 5. openresty
+# 5. proxy-thru module
+RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
+RUN cd ngx_http_proxy_thru_module && git checkout dev
+
+# 6. openresty
 RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
 RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
+
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
     --prefix=/usr \
     --with-pcre=/tmp/openresty/pcre2-${PCRE2_VERSION} \
     --add-module=../ngx_http_proxy_connect_module \
+    --add-module=../ngx_http_proxy_thru_module \
     --add-module=../nginx-auth-jwt \
     --add-module=../nginx-http-auth-digest \
     --sbin-path=/opt/openresty/sbin/nginx \
@@ -68,9 +77,19 @@ RUN ./configure \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
     --http-log-path=/var/log/nginx/error.log
-RUN patch -d build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
-    -p 1 \
+RUN patch \
+    --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
+    --strip 1 \
     < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_${OPENRESTY_NGX_CONNECT_PATCH_VERSION}.patch
+RUN patch \
+    --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
+    --strip 1 \
+    < ../ngx_http_proxy_thru_module/patches/nginx-${OPENRESTY_NGINX_CORE_VERSION}.patch
+RUN patch \
+    --directory ../ngx_http_proxy_connect_module/ \
+    --strip 1 \
+    < ../ngx_http_proxy_thru_module/patches/ngx_http_proxy_connect_module-0.0.7.patch
+
 RUN gmake
 RUN gmake DESTDIR=/tmp/openresty-bin install
 
@@ -83,7 +102,7 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 # ------------
 
 
-FROM redhat/ubi10:latest as runner
+FROM redhat/ubi10:latest AS runner
 
 ENV OPENRESTY_VERSION="1.27.1.2"
 ENV OPENRESTY_DIST_SUFFIX="harness"

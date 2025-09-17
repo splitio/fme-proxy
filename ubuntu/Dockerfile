@@ -25,26 +25,38 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     -y 
 RUN DEBIAN_FRONTEND=noninteractive apt remove --purge --auto-remove -y
 
+RUN mkdir -p /tmp/openresty
+WORKDIR /tmp/openresty
+
+# TODO: REMOVE THIS ONCE proxy_thru repo is public
+COPY .netrc /root
+
 # prepare sources:
 # ----------------
 # 1.nginx
-RUN mkdir -p /tmp/openresty
-WORKDIR /tmp/openresty
 RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
 RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
+
 # 2.connect module
-RUN git clone https://github.com/mredolatti/ngx_http_proxy_connect_module.git
-RUN cd ngx_http_proxy_connect_module && git checkout 45a91e6 
+RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
+RUN cd ngx_http_proxy_connect_module && git checkout v0.0.7
+
 # 3.jwt module
 RUN git clone https://github.com/kjdev/nginx-auth-jwt
+
 # 4. digest auth module
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
 RUN cd nginx-http-auth-digest && git checkout e6e0fe8
+
+# 5. proxy-thru module
+RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
+RUN cd ngx_http_proxy_thru_module && git checkout dev
 
 # build openresty with support for modules above
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
     --add-module=../ngx_http_proxy_connect_module \
+    --add-module=../ngx_http_proxy_thru_module \
     --add-module=../nginx-auth-jwt \
     --add-module=../nginx-http-auth-digest \
     --sbin-path=/opt/openresty/sbin/nginx \
@@ -52,9 +64,19 @@ RUN ./configure \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
     --http-log-path=/var/log/nginx/error.log
-RUN patch -d build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
-    -p 1 \
+RUN patch \
+    --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
+    --strip 1 \
     < ../ngx_http_proxy_connect_module/patch/proxy_connect_rewrite_${OPENRESTY_NGX_CONNECT_PATCH_VERSION}.patch
+RUN patch \
+    --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
+    --strip 1 \
+    < ../ngx_http_proxy_thru_module/patches/nginx-${OPENRESTY_NGINX_CORE_VERSION}.patch
+RUN patch \
+    --directory ../ngx_http_proxy_connect_module/ \
+    --strip 1 \
+    < ../ngx_http_proxy_thru_module/patches/ngx_http_proxy_connect_module-0.0.7.patch
+
 RUN make
 RUN make install
 RUN make DESTDIR=/tmp/openresty-bin install

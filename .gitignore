@@ -16,3 +16,4 @@ clients/java/.gradle
 
 *.passwd
 *.jwks
+.netrc
