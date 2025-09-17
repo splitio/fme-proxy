@@ -112,10 +112,17 @@ jobs:
       - name: Get version
         run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
+      # TODO(mredolatti) Restore this jog with `latest` tags as well once job is working properly
+      #- name: Prepare tags for docker images
+      #  run: |
+      #    export TAGS="splitsoftware/fme-proxy:${{ matrix.os }}-latest,splitsoftware/fme-proxy:${{ matrix.os }}-${VERSION}"
+      #    [ "${{ matrix.os }}" == "ubuntu" ] && export TAGS="${TAGS},splitsoftware/fme-proxy:latest,splitsoftware/fme-proxy:${VERSION}"
+      #    echo "TAGS=${TAGS}" >> $GITHUB_ENV
+
       - name: Prepare tags for docker images
         run: |
-          export TAGS="splitsoftware/fme-proxy:${{ matrix.os }}-latest,splitsoftware/fme-proxy:${{ matrix.os }}-${VERSION}"
-          [ "${{ matrix.os }}" == "ubuntu" ] && export TAGS="${TAGS},splitsoftware/fme-proxy:latest,splitsoftware/fme-proxy:${VERSION}"
+          export TAGS="splitsoftware/fme-proxy:${{ matrix.os }}-${VERSION}"
+          [ "${{ matrix.os }}" == "ubuntu" ] && export TAGS="${TAGS},splitsoftware/fme-proxy:${VERSION}"
           echo "TAGS=${TAGS}" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
