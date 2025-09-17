@@ -1,0 +1,45 @@
+name: TEST
+
+on:
+  push
+
+jobs:
+  crap:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      matrix:
+        os:
+          - ubuntu
+          - redhat
+    steps:
+
+      - name: set version
+        run: |
+          echo 'VERSION=1.1.0-rc1' >> $GITHUB_ENV
+
+      - name: Prepare tags for docker image
+        run: |
+          export TAGS="splitsoftware/fme-proxy:${{ matrix.os }}-latest,splitsoftware/fme-proxy:${{ matrix.os }}-${VERSION}"
+          [ "${{ matrix.os }}" == "ubuntu" ] && export TAGS="$TAGS,splitsoftware/fme-proxy:latest,splitsoftware/fme-proxy:${VERSION}"
+          echo "TAGS=${TAGS}" >> $GITHUB_ENV
+
+#      - name: Prepare tags for docker image
+#        run: |
+#          if [ "${{ matrix.os }}" == "ubuntu" ]; then \
+#            echo "TAGS=splitsoftware/fme-proxy:latest,splitsoftware/fme-proxy:${VERSION},splitsoftware/fme-proxy:ubuntu-latest,splitsoftware/fme-proxy:ubuntu-${VERSION}" >> "$GITHUB_ENV"; \
+#          else \
+#            echo "TAGS=splitsoftware/fme-proxy:redhat-latest,splitsoftware/fme-proxy:redhat-${VERSION}" >> "$GITHUB_ENV"; \
+#          fi
+
+      - name: print vars
+        run: |
+          echo "from env.: ${{ env.TAGS }}"
+          echo "from evs: $TAGS"
+
+      - name: map tags
+        run: |
+          echo $(while read tag; do printf -- "-t ${tag} "; done <<<${TAGS//,/$'\n'})
