@@ -5,16 +5,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  id-token: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.run_number || github.event.pull_request.number }}
   cancel-in-progress: true
-
 
 env:
   REGISTRY_IMAGE: ${{ vars.ECR_TESTING_URL }}/${{ github.event.repository.name }}
 
 jobs:
-
   bpsdh:
     name: "Build platform-specific image for dockerhub"
     runs-on: ${{ matrix.platform == 'linux/amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm-large' }}
