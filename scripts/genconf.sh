@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-
 ############## errors
 readonly ERR_NO_SERVERS=100
 readonly ERR_NO_PORT=101
@@ -47,9 +45,12 @@ http {
     server_tokens off;
     proxy_hide_header X-Runtime;
     proxy_hide_header X-Powered-By;
+    more_clear_headers Server;
 
     lua_package_path "/etc/nginx/lua/?.lua;/opt/openresty/lua/?.lua;;";
 {{TARGET_WHITELIST_INIT_BLOCK}}
+
+    error_page 400 401 402 403 404 405 406 500 501 502 503 /error.html;
 
     # version 
     server {
@@ -59,7 +60,7 @@ http {
             content_by_lua_block { ngx.say("{{VERSION}}") }
         }
 
-{{ERROR_HANDLING_BLOCK}}
+        root /var/www;
 
     }
 {{SERVER_DEFINITIONS}}
@@ -71,7 +72,9 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
     # {{NAME}}
     server {
         listen                         {{PORT}} {{SSL}};
-  
+
+        root /var/www;
+
 {{SSL_BLOCK}}
 {{AUTH_BLOCK}}
 
@@ -87,7 +90,9 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
 {{PROXY_THRU_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
 
-{{ERROR_HANDLING_BLOCK}}
+        location / {
+        }
+
     }
 EOF
 
@@ -154,18 +159,6 @@ read -r -d '' PROXY_THRU_SSL_BLOCK << "EOF"
 
 EOF
 
-read -r -d '' ERROR_HANDLING_BLOCK << "EOF"
-        location /error_handler {
-            internal;
-            content_by_lua_block {
-                local res = ngx.location.capture(ngx.var.uri);
-                ngx.say(res.status);
-            }
-        }
-
-        error_page 400 401 403 404 405 500 501 502 503 /error_handler;
-EOF
-
 IFS=${IFS_BAK}
 
 
@@ -216,7 +209,7 @@ function gen_server_section() {
 
     ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v auth_block="${auth_block}" \
         -v proxy_thru_block="${proxy_thru_block}" -v resolver="${resolver}" -v target_ports="${target_ports}" \
-        -v target_whitelist_block="${target_whitelist_block}" -v err_handling_block="${ERROR_HANDLING_BLOCK}" \
+        -v target_whitelist_block="${target_whitelist_block}" \
         '{
             sub("{{NAME}}", id);
             sub("{{PORT}}", port);
@@ -227,7 +220,6 @@ function gen_server_section() {
             sub("{{PROXY_THRU_BLOCK}}", proxy_thru_block);
             sub("{{RESOLVER}}", resolver);
             sub("{{HOST_WHITELIST_BLOCK}}", target_whitelist_block);
-            sub("{{ERROR_HANDLING_BLOCK}}", err_handling_block);
         };1' <<< "${SERVER_DEFINITION}"
 }
 
@@ -358,7 +350,6 @@ ${AWK} \
     -v servers="${server_definitions}" \
     -v whinit="${whitelist_init}" \
     -v loglevel="${HFP_LOG_LEVEL:-info}" \
-    -v err_handling_block="${ERROR_HANDLING_BLOCK}" \
     '{
         sub("{{VERSION}}",version);
         sub("{{WORKER_PROCESSES}}",processes);
@@ -366,6 +357,5 @@ ${AWK} \
         sub("{{SERVER_DEFINITIONS}}",servers);
         sub("{{TARGET_WHITELIST_INIT_BLOCK}}", whinit); 
         sub("{{LOG_LEVEL}}", loglevel);
-        sub("{{ERROR_HANDLING_BLOCK}}", err_handling_block);
     };1' \
     <<< "${BASE_CONF}"

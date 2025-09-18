@@ -73,7 +73,6 @@ RUN ./configure \
     --add-module=../nginx-auth-jwt \
     --add-module=../nginx-http-auth-digest \
     --sbin-path=/opt/openresty/sbin/nginx \
-    --conf-path=/opt/openresty/conf/nginx.conf \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
     --http-log-path=/var/log/nginx/error.log
@@ -130,6 +129,11 @@ COPY scripts /opt/openresty/scripts
 RUN mkdir -p /var/run/nginx
 RUN mkdir -p /etc/nginx/lua
 
+# setup empty document root
+RUN mkdir -p /var/www
+RUN touch /var/www/index.html
+RUN touch /var/www/error.html
+
 # setup version
 COPY VERSION /.version
 
@@ -142,5 +146,6 @@ RUN chmod -R g=u /etc/nginx
 RUN chmod -R g=u /opt/openresty
 RUN chmod -R g=u /var/log/nginx
 RUN chmod -R g=u /var/run/nginx
+RUN chmod -R 555 /var/www
 
 ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]

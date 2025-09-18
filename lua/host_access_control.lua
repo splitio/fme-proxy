@@ -14,7 +14,9 @@ function M.fail_if_host_not_allowed(whitelist)
         end
     end
 
-    ngx.exit(ngx.HTTP_FORBIDDEN)
+    ngx.status = ngx.HTTP_FORBIDDEN;
+    ngx.say("-");
+    ngx.exit(ngx.HTTP_OK);
 end
 
 return M
