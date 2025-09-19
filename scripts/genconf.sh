@@ -314,7 +314,7 @@ function gen_target_whitelist_init_block() {
         if [ "${allowed_targets}" != "\*" ]; then
             statements="${statements}        require \"host_whitelist_${sid}\"\n"
         fi
-    done <<< "${HFP_PROXIES},"
+    done <<< "${HP_PROXIES},"
 
     if [ ! -z "${statements}" ]; then
         ${AWK} -v stmts="${statements}" '{sub("{{REQUIRE_LIST}}", stmts)};1' <<< "${TARGET_WHITELIST_INIT_BLOCK}"
@@ -323,12 +323,12 @@ function gen_target_whitelist_init_block() {
 
 ############## main execution flow
 
-HFP_VERSION_FILE="${HFP_VERSION_FILE:-/.version}"
+HP_VERSION_FILE="${HP_VERSION_FILE:-/.version}"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 source "${SCRIPT_DIR}/commons.sh"
 
 # ensure minimal config is supplied
-[ -z "${HFP_PROXIES}" ] && log_error "HFP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" && exit "${ERR_NO_SERVERS}"
+[ -z "${HP_PROXIES}" ] && log_error "HP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" && exit "${ERR_NO_SERVERS}"
 
 server_definitions=""
 while read -r -d ',' sid; do
@@ -336,7 +336,7 @@ while read -r -d ',' sid; do
     if [ ${ret} -ne 0 ]; then
         exit ${ret}
     fi
-done <<< "${HFP_PROXIES},"
+done <<< "${HP_PROXIES},"
 
 whitelist_init=$(gen_target_whitelist_init_block)
 if [ ${ret} -ne 0 ]; then
@@ -344,12 +344,12 @@ if [ ${ret} -ne 0 ]; then
 fi
 
 ${AWK} \
-    -v version="$(head -n1 ${HFP_VERSION_FILE})" \
-    -v processes="${HFP_WORKER_PROCESSES:-4}" \
-    -v connections="${HFP_WORKER_CONNECTIONS:-1024}" \
+    -v version="$(head -n1 ${HP_VERSION_FILE})" \
+    -v processes="${HP_WORKER_PROCESSES:-4}" \
+    -v connections="${HP_WORKER_CONNECTIONS:-1024}" \
     -v servers="${server_definitions}" \
     -v whinit="${whitelist_init}" \
-    -v loglevel="${HFP_LOG_LEVEL:-info}" \
+    -v loglevel="${HP_LOG_LEVEL:-info}" \
     '{
         sub("{{VERSION}}",version);
         sub("{{WORKER_PROCESSES}}",processes);
