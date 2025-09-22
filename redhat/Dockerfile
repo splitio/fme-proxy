@@ -67,6 +67,7 @@ RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
     --prefix=/usr \
+    --with-http_stub_status_module \
     --with-pcre=/tmp/openresty/pcre2-${PCRE2_VERSION} \
     --add-module=../ngx_http_proxy_connect_module \
     --add-module=../ngx_http_proxy_thru_module \

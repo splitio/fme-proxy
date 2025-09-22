@@ -55,6 +55,7 @@ RUN cd ngx_http_proxy_thru_module && git checkout dev
 # build openresty with support for modules above
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
+    --with-http_stub_status_module \
     --add-module=../ngx_http_proxy_connect_module \
     --add-module=../ngx_http_proxy_thru_module \
     --add-module=../nginx-auth-jwt \

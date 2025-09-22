@@ -65,6 +65,8 @@ http {
     }
 {{SERVER_DEFINITIONS}}
 
+{{STATS_SERVER}}
+
 }
 EOF
 
@@ -156,6 +158,16 @@ read -r -d '' PROXY_THRU_SSL_BLOCK << "EOF"
         proxy_thru_ssl;
         proxy_thru_ssl_verify;
         proxy_thru_ssl_verify_cert {{PROXY_THRU_SSL_CERT}};
+
+EOF
+
+read -r -d '' STATS_BLOCK << "EOF"
+    server {
+        listen {{PORT}};
+        location /stats {
+            stub_status;
+        }
+    }
 
 EOF
 
@@ -321,6 +333,12 @@ function gen_target_whitelist_init_block() {
     fi
 }
 
+function gen_stats_block() {
+    if [ ! -z "${HP_STATS_PORT}" ]; then
+        ${AWK} -v port="${HP_STATS_PORT}" '{sub("{{PORT}}", port)};1' <<< "${STATS_BLOCK}"
+    fi
+}
+
 ############## main execution flow
 
 HP_VERSION_FILE="${HP_VERSION_FILE:-/.version}"
@@ -350,6 +368,7 @@ ${AWK} \
     -v servers="${server_definitions}" \
     -v whinit="${whitelist_init}" \
     -v loglevel="${HP_LOG_LEVEL:-info}" \
+    -v stats_block="$(gen_stats_block)" \
     '{
         sub("{{VERSION}}",version);
         sub("{{WORKER_PROCESSES}}",processes);
@@ -357,5 +376,6 @@ ${AWK} \
         sub("{{SERVER_DEFINITIONS}}",servers);
         sub("{{TARGET_WHITELIST_INIT_BLOCK}}", whinit); 
         sub("{{LOG_LEVEL}}", loglevel);
+        sub("{{STATS_SERVER}}", stats_block);
     };1' \
     <<< "${BASE_CONF}"
