@@ -104,11 +104,13 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 
 FROM redhat/ubi10:latest AS runner
 
+USER root
+
 ENV OPENRESTY_VERSION="1.27.1.2"
 ENV OPENRESTY_DIST_SUFFIX="harness"
 
 RUN dnf install -y --setopt=tsflags=nodocs \
-    jansson
+    jansson gdb procps
 
 COPY --from=builder /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz /
 RUN tar xvzf openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
