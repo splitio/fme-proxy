@@ -113,6 +113,10 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     jansson gdb procps
 
 COPY --from=builder /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz /
+
+# FOR DEBUGGING ONLY: REMOVE AFTERWARDS!
+COPY --from=builder /tmp/openresty/ /tmp/openresty
+
 RUN tar xvzf openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 
 # setup shared libraries

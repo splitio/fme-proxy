@@ -363,7 +363,7 @@ fi
 
 ${AWK} \
     -v version="$(head -n1 ${HP_VERSION_FILE})" \
-    -v processes="${HP_WORKER_PROCESSES:-4}" \
+    -v processes="${HP_WORKER_PROCESSES:-1}" \
     -v connections="${HP_WORKER_CONNECTIONS:-1024}" \
     -v servers="${server_definitions}" \
     -v whinit="${whitelist_init}" \
