@@ -58,7 +58,7 @@ RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. proxy-thru module
 RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
-RUN cd ngx_http_proxy_thru_module && git checkout dev
+RUN cd ngx_http_proxy_thru_module && git checkout 3151b03
 
 # 6. openresty
 RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
