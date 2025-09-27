@@ -66,6 +66,8 @@ RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
 
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
+    --with-debug \
+    --with-cc-opt='-O0 -g -fsanitize=address' \
     --prefix=/usr \
     --with-http_stub_status_module \
     --with-pcre=/tmp/openresty/pcre2-${PCRE2_VERSION} \
