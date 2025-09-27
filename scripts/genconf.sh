@@ -42,8 +42,15 @@ http {
     uwsgi_temp_path /tmp/uwsgi_temp;
     scgi_temp_path /tmp/scgi_temp;
 
+    server_tokens off;
+    proxy_hide_header X-Runtime;
+    proxy_hide_header X-Powered-By;
+    more_clear_headers Server;
+
     lua_package_path "/etc/nginx/lua/?.lua;/opt/openresty/lua/?.lua;;";
 {{TARGET_WHITELIST_INIT_BLOCK}}
+
+    error_page 400 401 402 403 404 405 406 500 501 502 503 /error.html;
 
     # version 
     server {
@@ -52,8 +59,13 @@ http {
             default_type text/plain;
             content_by_lua_block { ngx.say("{{VERSION}}") }
         }
+
+        root /var/www;
+
     }
 {{SERVER_DEFINITIONS}}
+
+{{STATS_SERVER}}
 
 }
 EOF
@@ -62,7 +74,9 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
     # {{NAME}}
     server {
         listen                         {{PORT}} {{SSL}};
-  
+
+        root /var/www;
+
 {{SSL_BLOCK}}
 {{AUTH_BLOCK}}
 
@@ -77,6 +91,10 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
 
 {{PROXY_THRU_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
+
+        location / {
+        }
+
     }
 EOF
 
@@ -143,7 +161,18 @@ read -r -d '' PROXY_THRU_SSL_BLOCK << "EOF"
 
 EOF
 
+read -r -d '' STATS_BLOCK << "EOF"
+    server {
+        listen {{PORT}};
+        location /stats {
+            stub_status;
+        }
+    }
+
+EOF
+
 IFS=${IFS_BAK}
+
 
 ############## internal functions
 
@@ -153,7 +182,7 @@ function gen_server_section() {
     local port=$(get_var ${id} PORT)
     [ -z "${port}" ] && log_error "Server '${id}' is missing port, which is mandatory. Aborting" && return "${ERR_NO_PORT}"
 
-    local target_ports="80,443"
+    local target_ports="80 443"
     local tpr=$(get_var ${id} ALLOWED_TARGET_PORTS)
     if [ ! -z "${tpr}" ]; then
         target_ports=$(tr ',' ' ' <<< "${tpr}")
@@ -297,21 +326,27 @@ function gen_target_whitelist_init_block() {
         if [ "${allowed_targets}" != "\*" ]; then
             statements="${statements}        require \"host_whitelist_${sid}\"\n"
         fi
-    done <<< "${HFP_PROXIES},"
+    done <<< "${HP_PROXIES},"
 
     if [ ! -z "${statements}" ]; then
         ${AWK} -v stmts="${statements}" '{sub("{{REQUIRE_LIST}}", stmts)};1' <<< "${TARGET_WHITELIST_INIT_BLOCK}"
     fi
 }
 
+function gen_stats_block() {
+    if [ ! -z "${HP_STATS_PORT}" ]; then
+        ${AWK} -v port="${HP_STATS_PORT}" '{sub("{{PORT}}", port)};1' <<< "${STATS_BLOCK}"
+    fi
+}
+
 ############## main execution flow
 
-HFP_VERSION_FILE="${HFP_VERSION_FILE:-/.version}"
+HP_VERSION_FILE="${HP_VERSION_FILE:-/.version}"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 source "${SCRIPT_DIR}/commons.sh"
 
 # ensure minimal config is supplied
-[ -z "${HFP_PROXIES}" ] && log_error "HFP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" && exit "${ERR_NO_SERVERS}"
+[ -z "${HP_PROXIES}" ] && log_error "HP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" && exit "${ERR_NO_SERVERS}"
 
 server_definitions=""
 while read -r -d ',' sid; do
@@ -319,7 +354,7 @@ while read -r -d ',' sid; do
     if [ ${ret} -ne 0 ]; then
         exit ${ret}
     fi
-done <<< "${HFP_PROXIES},"
+done <<< "${HP_PROXIES},"
 
 whitelist_init=$(gen_target_whitelist_init_block)
 if [ ${ret} -ne 0 ]; then
@@ -327,18 +362,20 @@ if [ ${ret} -ne 0 ]; then
 fi
 
 ${AWK} \
-    -v version="$(head -n1 ${HFP_VERSION_FILE})" \
-    -v processes="${HFP_WORKER_PROCESSES:-4}" \
-    -v connections="${HFP_WORKER_CONNECTIONS:-1024}" \
+    -v version="$(head -n1 ${HP_VERSION_FILE})" \
+    -v processes="${HP_WORKER_PROCESSES:-1}" \
+    -v connections="${HP_WORKER_CONNECTIONS:-1024}" \
     -v servers="${server_definitions}" \
     -v whinit="${whitelist_init}" \
-    -v loglevel="${HFP_LOG_LEVEL:-info}" \
+    -v loglevel="${HP_LOG_LEVEL:-info}" \
+    -v stats_block="$(gen_stats_block)" \
     '{
         sub("{{VERSION}}",version);
         sub("{{WORKER_PROCESSES}}",processes);
         sub("{{WORKER_CONNECTIONS}}",connections);
         sub("{{SERVER_DEFINITIONS}}",servers);
         sub("{{TARGET_WHITELIST_INIT_BLOCK}}", whinit); 
-        sub("{{LOG_LEVEL}}", loglevel); 
+        sub("{{LOG_LEVEL}}", loglevel);
+        sub("{{STATS_SERVER}}", stats_block);
     };1' \
     <<< "${BASE_CONF}"
