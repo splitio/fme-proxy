@@ -15,7 +15,8 @@ permissions:
 jobs:
 
   testgc:
-    name: "test bash scripts"
+    name: 'test bash scripts'
+    runs-on: 'ubuntu-24.04'
     steps:
 
       - name: Checkout code
