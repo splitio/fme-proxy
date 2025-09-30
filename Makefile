@@ -144,6 +144,10 @@ images_release:
 
 # -----------------
 
+## test scripts
+test-scripts:
+	bash tests/scripts/test_genconf.sh
+
 # internal use macros
 platform_str		= $(if $(PLATFORM),--platform $(PLATFORM),)
 

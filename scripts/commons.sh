@@ -3,7 +3,7 @@
 # -- shared functions
 
 function get_var() {
-    local var="HFP_${1}_${2}"
+    local var="HP_${1}_${2}"
     echo -n ${!var}
 }
 

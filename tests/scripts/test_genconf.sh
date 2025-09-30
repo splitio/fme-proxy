@@ -10,7 +10,7 @@ GENCONF="${PROJECT_DIR}/scripts/genconf.sh"
 
 function test_defaults_and_simple_server() {
 
-    local conf=$(HFP_PROXIES=p1 HFP_p1_PORT=3128 bash "${GENCONF}")
+    local conf=$(HP_PROXIES=p1 HP_p1_PORT=3128 bash "${GENCONF}")
     assert_eq "$(_get_prop "${conf}" "daemon")" "off" "unexpected daemon"
     assert_eq "$(_get_prop "${conf}" "worker_processes")" "4" "unexpected worker_processes"
     assert_eq "$(_get_prop "${conf}" "error_log")" "/var/log/nginx/error.log info" "unexpected error_log"
@@ -39,13 +39,13 @@ function test_defaults_and_simple_server() {
 
     local version_location="$(_get_section "${version}" "location /version")"
     assert_eq "$(_get_prop "${version_location}" "default_type")"  "text/plain" "unexpected default_type in version location"
-    assert_eq "$(_get_inline_section "${version_location}" "content_by_lua_block")" "ngx.say(\"0.0.1-beta3\")" "unexpected version content block"
+    assert_eq "$(_get_inline_section "${version_location}" "content_by_lua_block")" "ngx.say(\"1.0.0\")" "unexpected version content block"
 
     local p1="$(_get_named_section "${http}" "server" "p1")"
     assert_eq "$(_get_prop "${p1}" "listen")" "3128" "unexpected port"
     assert_eq "$(_get_prop "${p1}" "resolver")" "8.8.8.8 ipv6=off" "unexpected resolver"
     assert_true "$(_property_exists "${p1}" "proxy_connect")" "proxy_connect directive not present"
-    assert_eq "$(_get_prop "${p1}" "proxy_connect_allow")" "80,443" "unexpected allowed ports"
+    assert_eq "$(_get_prop "${p1}" "proxy_connect_allow")" "80 443" "unexpected allowed ports"
     assert_eq "$(_get_prop "${p1}" "proxy_connect_connect_timeout")" "10s" "unexpected connect timeout"
     assert_eq "$(_get_prop "${p1}" "proxy_connect_data_timeout")" "120s" "unexpected data timeout"
 
@@ -56,12 +56,12 @@ function test_defaults_and_simple_server() {
 
 function test_mtls() {
 
-    local conf=$(HFP_PROXIES=p1 \
-        HFP_p1_PORT=3128 \
-        HFP_p1_SSL=true \
-        HFP_p1_SSL_CERTIFICATE=cert.crt \
-        HFP_p1_SSL_PRIVATE_KEY=pk.key \
-        HFP_p1_SSL_CLIENT_CERTIFICATE=client_cert.crt \
+    local conf=$(HP_PROXIES=p1 \
+        HP_p1_PORT=3128 \
+        HP_p1_SSL=true \
+        HP_p1_SSL_CERTIFICATE=cert.crt \
+        HP_p1_SSL_PRIVATE_KEY=pk.key \
+        HP_p1_SSL_CLIENT_CERTIFICATE=client_cert.crt \
         bash "${GENCONF}")
 
     local http=$(_get_section "${conf}" "http")
@@ -76,13 +76,13 @@ function test_mtls() {
 
 function test_tls_basic_auth() {
 
-    local conf=$(HFP_PROXIES=p1 \
-        HFP_p1_PORT=3128 \
-        HFP_p1_SSL=true \
-        HFP_p1_SSL_CERTIFICATE=cert.crt \
-        HFP_p1_SSL_PRIVATE_KEY=pk.key \
-        HFP_p1_AUTH=basic \
-        HFP_p1_AUTH_BASIC_PASSWD="pepe.passwd" \
+    local conf=$(HP_PROXIES=p1 \
+        HP_p1_PORT=3128 \
+        HP_p1_SSL=true \
+        HP_p1_SSL_CERTIFICATE=cert.crt \
+        HP_p1_SSL_PRIVATE_KEY=pk.key \
+        HP_p1_AUTH=basic \
+        HP_p1_AUTH_BASIC_PASSWD="pepe.passwd" \
         bash "${GENCONF}")
 
     local http=$(_get_section "${conf}" "http")
@@ -98,10 +98,10 @@ function test_tls_basic_auth() {
 
 function test_plain_digest_auth() {
 
-    local conf=$(HFP_PROXIES=p1 \
-        HFP_p1_PORT=3128 \
-        HFP_p1_AUTH=digest \
-        HFP_p1_AUTH_DIGEST_PASSWD="pepe2.passwd" \
+    local conf=$(HP_PROXIES=p1 \
+        HP_p1_PORT=3128 \
+        HP_p1_AUTH=digest \
+        HP_p1_AUTH_DIGEST_PASSWD="pepe2.passwd" \
         bash "${GENCONF}")
 
     local http=$(_get_section "${conf}" "http")
@@ -114,13 +114,13 @@ function test_plain_digest_auth() {
 
 function test_tls_bearer_auth() {
 
-    local conf=$(HFP_PROXIES=p1 \
-        HFP_p1_PORT=3128 \
-        HFP_p1_SSL=true \
-        HFP_p1_SSL_CERTIFICATE=cert.crt \
-        HFP_p1_SSL_PRIVATE_KEY=pk.key \
-        HFP_p1_AUTH=bearer \
-        HFP_p1_AUTH_BEARER_JWKS="my.jwks" \
+    local conf=$(HP_PROXIES=p1 \
+        HP_p1_PORT=3128 \
+        HP_p1_SSL=true \
+        HP_p1_SSL_CERTIFICATE=cert.crt \
+        HP_p1_SSL_PRIVATE_KEY=pk.key \
+        HP_p1_AUTH=bearer \
+        HP_p1_AUTH_BEARER_JWKS="my.jwks" \
         bash "${GENCONF}")
 
     local http=$(_get_section "${conf}" "http")
@@ -208,7 +208,7 @@ function _property_exists() {
 }
 
 # make version available to all tests
-export HFP_VERSION_FILE="${PROJECT_DIR}/VERSION"
+export HP_VERSION_FILE="${PROJECT_DIR}/VERSION"
 
 # import assert
 source "${SCRIPT_DIR}/assert.sh"

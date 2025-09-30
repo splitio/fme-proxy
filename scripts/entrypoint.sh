@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/commons.sh"
 bash "${OPENRESTY_SCRIPTS_PATH}/genconf.sh" > /etc/nginx/nginx.conf
 [ $? -ne 0 ] && log_error "config generation failed. aborting" && exit 1
 
-[[ ${HFP_DEBUG_CONF} == "true" ]] && echo "generated nginx config: " && cat /etc/nginx/nginx.conf
+[[ ${HP_DEBUG_CONF} == "true" ]] && echo "generated nginx config: " && cat /etc/nginx/nginx.conf
 
 bash "${OPENRESTY_SCRIPTS_PATH}/genallowlists.sh"
 [ $? -ne 0 ] && log_error "host whitelist generation failed. aborting" && exit 1

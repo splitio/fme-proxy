@@ -58,8 +58,8 @@ function generate_host_whitelist() {
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 source "${SCRIPT_DIR}/commons.sh"
 
-[ -z "${HFP_PROXIES}" ] \
-    && log_error "HFP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" \
+[ -z "${HP_PROXIES}" ] \
+    && log_error "HP_PROXIES is mandatory and must be a comma-separated list of proxy server names/identifiers" \
     && exit 1
 
 while read -r -d ',' server; do
@@ -70,4 +70,4 @@ while read -r -d ',' server; do
     elif [ ${ret} -ne "${RET_ALLOW_ALL}" ]; then
         exit 1
     fi
-done <<< "${HFP_PROXIES},"
+done <<< "${HP_PROXIES},"

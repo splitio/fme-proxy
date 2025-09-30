@@ -58,7 +58,7 @@ RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. proxy-thru module
 RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
-RUN cd ngx_http_proxy_thru_module && git checkout dev
+RUN cd ngx_http_proxy_thru_module && git checkout 1.0.0
 
 # 6. openresty
 RUN wget https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz
@@ -67,13 +67,13 @@ RUN tar xvzf openresty-${OPENRESTY_VERSION}.tar.gz
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
 RUN ./configure \
     --prefix=/usr \
+    --with-http_stub_status_module \
     --with-pcre=/tmp/openresty/pcre2-${PCRE2_VERSION} \
     --add-module=../ngx_http_proxy_connect_module \
     --add-module=../ngx_http_proxy_thru_module \
     --add-module=../nginx-auth-jwt \
     --add-module=../nginx-http-auth-digest \
     --sbin-path=/opt/openresty/sbin/nginx \
-    --conf-path=/opt/openresty/conf/nginx.conf \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
     --http-log-path=/var/log/nginx/error.log
@@ -104,11 +104,13 @@ RUN tar zcvf /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
 
 FROM redhat/ubi10:latest AS runner
 
+USER root
+
 ENV OPENRESTY_VERSION="1.27.1.2"
 ENV OPENRESTY_DIST_SUFFIX="harness"
 
 RUN dnf install -y --setopt=tsflags=nodocs \
-    jansson
+    jansson gdb procps
 
 COPY --from=builder /tmp/openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz /
 RUN tar xvzf openresty-${OPENRESTY_VERSION}-${OPENRESTY_DIST_SUFFIX}.tar.gz
@@ -130,6 +132,11 @@ COPY scripts /opt/openresty/scripts
 RUN mkdir -p /var/run/nginx
 RUN mkdir -p /etc/nginx/lua
 
+# setup empty document root
+RUN mkdir -p /var/www
+RUN touch /var/www/index.html
+RUN touch /var/www/error.html
+
 # setup version
 COPY VERSION /.version
 
@@ -142,5 +149,6 @@ RUN chmod -R g=u /etc/nginx
 RUN chmod -R g=u /opt/openresty
 RUN chmod -R g=u /var/log/nginx
 RUN chmod -R g=u /var/run/nginx
+RUN chmod -R 555 /var/www
 
 ENTRYPOINT ["/opt/openresty/scripts/entrypoint.sh"]
