@@ -50,7 +50,8 @@ RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. proxy-thru module
 RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
-RUN cd ngx_http_proxy_thru_module && git checkout 1.0.0
+RUN cd ngx_http_proxy_thru_module && git checkout ntls
+#RUN cd ngx_http_proxy_thru_module && git checkout 1.0.0
 
 # build openresty with support for modules above
 WORKDIR /tmp/openresty/openresty-${OPENRESTY_VERSION}
@@ -120,6 +121,7 @@ RUN mkdir -p /var/run/nginx
 RUN mkdir -p /etc/nginx/lua
 
 RUN bash -c 'mkdir -p /etc/nginx/{conf,credentials}'
+COPY rplocations /opt/openresty/rppresets
 COPY conf /opt/openresty/conf
 COPY lua /opt/openresty/lua
 COPY scripts /opt/openresty/scripts

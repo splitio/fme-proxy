@@ -39,7 +39,7 @@ function test_defaults_and_simple_server() {
 
     local version_location="$(_get_section "${version}" "location /version")"
     assert_eq "$(_get_prop "${version_location}" "default_type")"  "text/plain" "unexpected default_type in version location"
-    assert_eq "$(_get_inline_section "${version_location}" "content_by_lua_block")" "ngx.say(\"1.0.0\")" "unexpected version content block"
+    assert_eq "$(_get_inline_section "${version_location}" "content_by_lua_block")" "ngx.say(\"1.1.0-rc1\")" "unexpected version content block"
 
     local p1="$(_get_named_section "${http}" "server" "p1")"
     assert_eq "$(_get_prop "${p1}" "listen")" "3128" "unexpected port"

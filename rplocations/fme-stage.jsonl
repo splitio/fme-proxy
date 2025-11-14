@@ -1,0 +1,5 @@
+{ "path": "/fme-stage/sdk", "target": "https://sdk.split-stage.io" }
+{ "path": "/fme-stage/events", "target": "https://events.split-stage.io" }
+{ "path": "/fme-stage/auth", "target": "https://auth.split-stage.io" }
+{ "path": "/fme-stage/streaming", "target": "https://streaming.split.io" }
+{ "path": "/fme-stage/telemetry", "target": "https://telemetry.split-stage.io" }
