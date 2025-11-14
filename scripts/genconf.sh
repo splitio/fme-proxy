@@ -202,6 +202,7 @@ EOF
 read -r -d '' LOCATION_BLOCK << "EOF"
         location "{{PATH}}" {
             rewrite ^{{PATH}}(.*)$ $1 break;
+            {{SNI_SEND_LINE}}
             proxy_pass {{TARGET}} {{PROXY_THRU}};
         }
     
@@ -453,6 +454,7 @@ function gen_stats_block() {
 function gen_loc_list() {
 
     local locations_fn="${1}"
+
     [ ! -f "${locations_fn}" ] && return "${ERR_RP_FILE_NOT_FOUND}"
 
     local pthru="${2}"
@@ -462,6 +464,7 @@ function gen_loc_list() {
 
     regex_path="\"path\":[[:space:]]+\"([^\"]+)\""
     regex_target="\"target\":[[:space:]]+\"([^\"]+)\""
+    https_regex="^https://"
 
     while read line ; do
         path=""
@@ -473,11 +476,17 @@ function gen_loc_list() {
             target="${BASH_REMATCH[1]}"
         fi
 
-        awk -v path="${path}" -v target="${target}" -v pthru="${pthru}" \
+        local sni_line=""
+        if [[ $target =~ $https_regex ]]; then
+            sni_line="proxy_ssl_server_name on;"
+        fi
+
+        awk -v path="${path}" -v target="${target}" -v pthru="${pthru}" -v sni_line="${sni_line}" \
             '{
                 sub("{{PATH}}", path);
                 sub("{{TARGET}}", target);
                 sub("{{PROXY_THRU}}", pthru);
+                sub("{{SNI_SEND_LINE}}", sni_line);
             };1' <<<"${LOCATION_BLOCK}"
     done <"${locations_fn}"
 }
