@@ -324,7 +324,7 @@ function gen_rp_server_section() {
             return "${ret}"
         fi
 
-        locations="${locations}\n$(gen_loc_list "${loc_fn}" "")"; ret=${?}
+        locations="${locations}\n$(gen_loc_list "${loc_fn}" "${proxy_thru_block}")"; ret=${?}
         if [ ${ret} -ne 0 ]; then
             return "${ret}"
         fi
@@ -473,7 +473,7 @@ function gen_loc_list() {
             target="${BASH_REMATCH[1]}"
         fi
 
-        awk -v path="${path}" -v target="${target}" -v pthru="" \
+        awk -v path="${path}" -v target="${target}" -v pthru="${pthru}" \
             '{
                 sub("{{PATH}}", path);
                 sub("{{TARGET}}", target);
