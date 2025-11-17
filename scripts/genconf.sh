@@ -203,6 +203,7 @@ read -r -d '' LOCATION_BLOCK << "EOF"
         location "{{PATH}}" {
             rewrite ^{{PATH}}(.*)$ $1 break;
             {{SNI_SEND_LINE}}
+            {{READ_TIMEOUT_LINE}}
             proxy_pass {{TARGET}} {{PROXY_THRU}};
         }
     
@@ -464,16 +465,21 @@ function gen_loc_list() {
 
     regex_path="\"path\":[[:space:]]+\"([^\"]+)\""
     regex_target="\"target\":[[:space:]]+\"([^\"]+)\""
+    regex_read_timeout="\"read_timeout\":[[:space:]]*([0-9]+)"
     https_regex="^https://"
 
     while read line ; do
         path=""
         target=""
+        timeout="30"
         if [[ $line =~ $regex_path ]]; then
             path="${BASH_REMATCH[1]}"
         fi
         if [[ $line =~ $regex_target ]]; then
             target="${BASH_REMATCH[1]}"
+        fi
+        if [[ $line =~ $regex_read_timeout ]]; then
+            timeout="${BASH_REMATCH[1]}"
         fi
 
         local sni_line=""
@@ -481,12 +487,16 @@ function gen_loc_list() {
             sni_line="proxy_ssl_server_name on;"
         fi
 
+        rt_line="proxy_read_timeout ${timeout}s;"
+
         awk -v path="${path}" -v target="${target}" -v pthru="${pthru}" -v sni_line="${sni_line}" \
+            -v rt_line="${rt_line}" \
             '{
                 sub("{{PATH}}", path);
                 sub("{{TARGET}}", target);
                 sub("{{PROXY_THRU}}", pthru);
                 sub("{{SNI_SEND_LINE}}", sni_line);
+                sub("{{READ_TIMEOUT_LINE}}", rt_line);
             };1' <<<"${LOCATION_BLOCK}"
     done <"${locations_fn}"
 }
