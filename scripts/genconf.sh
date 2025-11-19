@@ -204,6 +204,7 @@ read -r -d '' LOCATION_BLOCK << "EOF"
             rewrite ^{{PATH}}(.*)$ $1 break;
             {{SNI_SEND_LINE}}
             {{READ_TIMEOUT_LINE}}
+            {{BUFFER_LINE}}
             proxy_pass {{TARGET}} {{PROXY_THRU}};
         }
     
@@ -466,12 +467,14 @@ function gen_loc_list() {
     regex_path="\"path\":[[:space:]]+\"([^\"]+)\""
     regex_target="\"target\":[[:space:]]+\"([^\"]+)\""
     regex_read_timeout="\"read_timeout\":[[:space:]]*([0-9]+)"
+    regex_buffer="\"buffer\":[[:space:]]*(true|false)"
     https_regex="^https://"
 
     while read line ; do
         path=""
         target=""
         timeout="30"
+        buffer="true"
         if [[ $line =~ $regex_path ]]; then
             path="${BASH_REMATCH[1]}"
         fi
@@ -481,21 +484,32 @@ function gen_loc_list() {
         if [[ $line =~ $regex_read_timeout ]]; then
             timeout="${BASH_REMATCH[1]}"
         fi
+        if [[ $line =~ $regex_buffer ]]; then
+            buffer="${BASH_REMATCH[1]}"
+        fi
 
         local sni_line=""
         if [[ $target =~ $https_regex ]]; then
+            # TODO(mredolatti) add check for pthru == "". otherwise this is unnecessary
             sni_line="proxy_ssl_server_name on;"
         fi
+
+        local buffer_line=""
+        if [[ ${buffer} == "false" ]]; then
+            buffer_line="proxy_buffering off;"
+        fi
+        echo "buffer: ${buffer} // buffer_line: ${buffer_line}" >&2
 
         rt_line="proxy_read_timeout ${timeout}s;"
 
         awk -v path="${path}" -v target="${target}" -v pthru="${pthru}" -v sni_line="${sni_line}" \
-            -v rt_line="${rt_line}" \
+            -v rt_line="${rt_line}" -v buffer_line="${buffer_line}" \
             '{
                 sub("{{PATH}}", path);
                 sub("{{TARGET}}", target);
                 sub("{{PROXY_THRU}}", pthru);
                 sub("{{SNI_SEND_LINE}}", sni_line);
+                sub("{{BUFFER_LINE}}", buffer_line);
                 sub("{{READ_TIMEOUT_LINE}}", rt_line);
             };1' <<<"${LOCATION_BLOCK}"
     done <"${locations_fn}"
