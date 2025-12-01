@@ -8,6 +8,7 @@ LOCAL_MTLS_PORT ?= 3129
 LOCAL_BASIC_PORT ?= 3130
 LOCAL_BEARER_PORT ?= 3131
 LOCAL_DIGEST_PORT ?= 3132
+LOCAL_REVERSE_PORT ?= 8000
 TARGET ?= "https://sdk.split.io/version"
 
 VERSION := $(shell head -n1 VERSION)
@@ -30,34 +31,40 @@ docker-run:
 		-p "$(LOCAL_BASIC_PORT):3130" \
 		-p "$(LOCAL_BEARER_PORT):3131" \
 		-p "$(LOCAL_DIGEST_PORT):3132" \
+		-p "$(LOCAL_REVERSE_PORT):8000" \
 		-e TZ="UTC" \
-		-e HFP_PROXIES=plain,tls,mtls,basic,digest,bearer \
-		-e HFP_DEBUG_CONF="true" \
-		-e HFP_plain_PORT=3127 \
-		-e HFP_tls_PORT=3128 \
-		-e HFP_tls_SSL="true" \
-		-e HFP_tls_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
-		-e HFP_tls_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
-		-e HFP_mtls_PORT=3129 \
-		-e HFP_mtls_SSL="true" \
-		-e HFP_mtls_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
-		-e HFP_mtls_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
-		-e HFP_mtls_SSL_CLIENT_CERTIFICATE=/etc/ssl/proxy/ca.crt \
-		-e HFP_basic_PORT=3130 \
-		-e HFP_basic_SSL="true" \
-		-e HFP_basic_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
-		-e HFP_basic_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
-		-e HFP_basic_AUTH=basic \
-		-e HFP_basic_AUTH_BASIC_PASSWD=/etc/nginx/passwd/basic.passwd \
-		-e HFP_bearer_PORT=3131 \
-		-e HFP_bearer_SSL="true" \
-		-e HFP_bearer_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
-		-e HFP_bearer_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
-		-e HFP_bearer_AUTH=bearer \
-		-e HFP_bearer_AUTH_BEARER_JWKS=/etc/nginx/keys/keys.jwks \
-		-e HFP_digest_PORT=3132 \
-		-e HFP_digest_AUTH=digest \
-		-e HFP_digest_AUTH_DIGEST_PASSWD=/etc/nginx/passwd/digest.passwd \
+		-e HP_PROXIES=plain,tls,mtls,basic,digest,bearer \
+		-e HP_DEBUG_CONF="true" \
+		-e HP_plain_PORT=3127 \
+		-e HP_tls_PORT=3128 \
+		-e HP_tls_SSL="true" \
+		-e HP_tls_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
+		-e HP_tls_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
+		-e HP_mtls_PORT=3129 \
+		-e HP_mtls_SSL="true" \
+		-e HP_mtls_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
+		-e HP_mtls_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
+		-e HP_mtls_SSL_CLIENT_CERTIFICATE=/etc/ssl/proxy/ca.crt \
+		-e HP_basic_PORT=3130 \
+		-e HP_basic_SSL="true" \
+		-e HP_basic_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
+		-e HP_basic_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
+		-e HP_basic_AUTH=basic \
+		-e HP_basic_AUTH_BASIC_PASSWD=/etc/nginx/passwd/basic.passwd \
+		-e HP_bearer_PORT=3131 \
+		-e HP_bearer_SSL="true" \
+		-e HP_bearer_SSL_CERTIFICATE=/etc/ssl/proxy/proxy.crt \
+		-e HP_bearer_SSL_PRIVATE_KEY=/etc/ssl/proxy/proxy.key \
+		-e HP_bearer_AUTH=bearer \
+		-e HP_bearer_AUTH_BEARER_JWKS=/etc/nginx/keys/keys.jwks \
+		-e HP_digest_PORT=3132 \
+		-e HP_digest_AUTH=digest \
+		-e HP_digest_AUTH_DIGEST_PASSWD=/etc/nginx/passwd/digest.passwd \
+		-e HP_PROXIES=reverse \
+		-e HP_DEBUG_CONF="true" \
+		-e HP_reverse_PORT=8000 \
+		-e HP_reverse_TYPE=REVERSE \
+		-e HP_reverse_LOCATIONS=PRESET:fme-stage \
 		--volume "${PWD}/certs/proxy/:/etc/ssl/proxy" \
 		--volume "${PWD}/passwd:/etc/nginx/passwd" \
 		--volume "${PWD}/keys:/etc/nginx/keys" \

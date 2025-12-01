@@ -14,6 +14,7 @@ readonly ERR_AUTH_NO_BEARER_JWKS=123
 readonly ERR_THRU_NO_PROXY_CACERT=130
 readonly ERR_RP_INVALID_SCHEME=150
 readonly ERR_RP_FILE_NOT_FOUND=151
+readonly ERR_RP_NO_VERIFICATION_CERT=152
 ##############
 
 readonly RP_PRESETS_PATH="${RP_PRESETS_PATH:-/opt/openresty/rppresets}"
@@ -117,8 +118,11 @@ read -r -d '' REVERSE_PROXY_SERVER_DEFINITION <<"EOF"
 
 {{PROXY_THRU_BLOCK}}
 
+{{TARGET_HOST_SSL_VERIFICATION_BLOCK}}
+
         # reverse proxy locations
 {{LOCATIONS}}
+
 
         location / {
         }
@@ -209,6 +213,12 @@ read -r -d '' LOCATION_BLOCK << "EOF"
         }
     
 EOF
+
+read -r -d '' TARGET_HOST_SSL_VERIFICATION_BLOCK << "EOF"
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate {{CERT}};
+EOF
+
 
 IFS=${IFS_BAK}
 
@@ -334,9 +344,15 @@ function gen_rp_server_section() {
 
     done <<< "${locations_raw},"
 
+    verif=$(gen_target_ssl_verify_block); ret=${?}
+    if [ ${ret} -ne 0 ]; then
+        return "${ret}"
+    fi
+    
+    echo "VERIF: ${verif}" >&2
 
     ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v proxy_thru_block="${proxy_thru_block}" \
-        -v resolver="${resolver}"  -v locations="${locations}" \
+        -v resolver="${resolver}" -v locations="${locations}" -v ssl_verify_block="${verif}" \
         '{
             sub("{{NAME}}", id);
             sub("{{PORT}}", port);
@@ -345,6 +361,7 @@ function gen_rp_server_section() {
             sub("{{PROXY_THRU_BLOCK}}", proxy_thru_block);
             sub("{{RESOLVER}}", resolver);
             sub("{{LOCATIONS}}", locations);
+            sub("{{TARGET_HOST_SSL_VERIFICATION_BLOCK}}", ssl_verify_block);
         };1' <<< "${REVERSE_PROXY_SERVER_DEFINITION}"
 
 }
@@ -453,6 +470,16 @@ function gen_stats_block() {
     fi
 }
 
+function gen_target_ssl_verify_block() {
+    cert=$(get_var "${id}" LOCATIONS_SSL_VERIFICATION_CERT)
+    if [ -z "${cert}" ]; then
+        return
+    fi
+
+    ${AWK} -v cert="${cert}" '{sub("{{CERT}}", cert)};1' <<< "${TARGET_HOST_SSL_VERIFICATION_BLOCK}"
+
+}
+
 function gen_loc_list() {
 
     local locations_fn="${1}"
@@ -498,7 +525,6 @@ function gen_loc_list() {
         if [[ ${buffer} == "false" ]]; then
             buffer_line="proxy_buffering off;"
         fi
-        echo "buffer: ${buffer} // buffer_line: ${buffer_line}" >&2
 
         rt_line="proxy_read_timeout ${timeout}s;"
 

@@ -51,74 +51,81 @@ As mentioned above, the applications supports listening on multiple ports, each 
 - Context: global
 - Maximum level of unfiltered logs
 - Default: `info`
-#### HP_&lt;server_name&gt;_PORT
+#### HP_&lt;server_name&gt;_TYPE
+- Context: server-specific
+- Whether the proxy is of type FORWARD (default) or REVERSE
+#### HP_&lt;server_name&gt;_PORT (FORWARD & REVERSE)
 - Context: server-specific
 - Port on which this server will listen on
 - Default: none / required
-#### HP_&lt;server_name&gt;_SSL
+#### HP_&lt;server_name&gt;_SSL (FORWARD & REVERSE)
 - Context: server-specific
 - Whether to enable traffic encryption on this server
 - Default: `false`
-#### HP_&lt;server_name&gt;_SSL_CERTIFICATE
+#### HP_&lt;server_name&gt;_SSL_CERTIFICATE (FORWARD & REVERSE)
 - Context: server-specific
 - Server certificate to use for traffic encryption
 - Default: none / required if `HP_<server_name>_SSL` is enabled
 - Example: `/my_volume/pki/server.crt`
-#### HP_&lt;server_name&gt;_SSL_PRIVATE_KEY
+#### HP_&lt;server_name&gt;_SSL_PRIVATE_KEY (FORWARD & REVERSE)
 - Context: server-specific
 - Private key from which the certificate's pubkey is derived.
 - Default: none / required if `HP_<server_name>_SSL` is enabled
 - Example: `/my_volume/pki/server.key`
-#### HP_&lt;server_name&gt;_SSL_CLIENT_CERTIFICATE
+#### HP_&lt;server_name&gt;_SSL_CLIENT_CERTIFICATE (FORWARD & REVERSE)
 - Context: server-specific
 - CA certificate used to verify certificates presented by clients (mTLS is enabled when this variable is not empty)
 - Default: none
 - Example: `/my_volume/pki/client_ca.crt`
-#### HP_&lt;server_name&gt;_AUTH
+#### HP_&lt;server_name&gt;_AUTH (FORWARD only)
 - Context: server-specific
 - Whether to enable authentication on this server, and what scheme to use
 - Default: none
 - Options: [`basic`|`digest`|`bearer`]
-#### HP_&lt;server_name&gt;_AUTH_BASIC_PASSWD
+#### HP_&lt;server_name&gt;_AUTH_BASIC_PASSWD (FORWARD only)
 - Context: server-specific
 - Passwd file with user/hashes used for basic authentication
 - Default: none / required if `HP_<server_name>_AUTH` is set to basic
 - Example: `/my_volume/passwd/basic.passwd`
-#### HP_&lt;server_name&gt;_AUTH_DIGEST_PASSWD
+#### HP_&lt;server_name&gt;_AUTH_DIGEST_PASSWD (FORWARD only)
 - Context: server-specific
 - Passwd file with user/hashes used for digest authentication
 - Default: none / required if `HP_<server_name>_AUTH` is set to digest
 - Example: `/my_volume/passwd/digest.passwd`
-#### HP_&lt;server_name&gt;_AUTH_BEARER_JWKS
+#### HP_&lt;server_name&gt;_AUTH_BEARER_JWKS (FORWARD only)
 - Context: server-specific
 - JWKS store with public keys that can be used to parse a token inside a bearer auth CONNECT request
 - Default: none / required if `HP_<server_name>_AUTH` is set to bearer
 - Example: `/my_volume/keys/keys.jwks`
-#### HP_&lt;server_name&gt;_PROXY_CHAIN
+#### HP_&lt;server_name&gt;_PROXY_THRU
 - Context: server-specific
 - Upstream proxy to which this proxy must connect and forward requests (format: &lt;host&gt;:&lt;port&gt;)
 - Default: none
 - Example: `my-upstream-proxy:3128`
-#### HP_&lt;server_name&gt;_PROXY_CHAIN_SSL
+#### HP_&lt;server_name&gt;_PROXY_THRU_SSL (FORWARD & REVERSE)
 - Context: server-specific
 - Setup a TLS connection between this proxy and the upstream, prior to issuing the CONNECT request on the latter
 - Default: disabled
 - Example: `true`
-#### HP_&lt;server_name&gt;_PROXY_CHAIN_CA_CERT
+#### HP_&lt;server_name&gt;_PROXY_THRU_CA_CERT (FORWARD & REVERSE)
 - Context: server-specific
-- CA certificate to use to validate use when verifying upstream's cert.
+- CA certificate to use to verify upstream proxy's cert.
 - Default: none / required if `HP_<server_name>_PROXY_CHAIN_SSL` is enabled.
 - Example: `/my_volume/pki/ca.crt`
-#### HP_&lt;server_name&gt;_RESOLVER
+#### HP_&lt;server_name&gt;_RESOLVER (FORWARD & REVERSE)
 - Context: server-specific
 - Name server to use when resolving upstream. Useful if an internal DNS is required to reach hosts inside a VPC or kubernetes cluster.
 - Default: 8.8.8.8
 - Example: `127.0.0.53`
-#### HP_&lt;server_name&gt;_ALLOWED_TARGETS
+#### HP_&lt;server_name&gt;_ALLOWED_TARGETS (FORWARD only)
 - Context: server-specific
 - Comma separated list of host:port pairs to which tunnels can be established. Non matching hosts will get a 403 when attempting CONNECT request.
 - Default: `sdk.split.io:443,auth.split.io:443,streaming.split.io:443,events.split.io:443,telemetry.split.io:443`
-#### HP_&lt;server_name&gt;_ALLOWED_TARGET_PORTS
+#### HP_&lt;server_name&gt;_ALLOWED_TARGET_PORTS (FORWARD only)
 - Context: server-specific
 - Comma separated list of ports to which tunnels can be established. It must include all ports specified in `HP_<server_name>_ALLOWED_TARGETS` if != "*"
+- Default: `443`
+#### HP_&lt;server_name&gt;_LOCATIONS_SSL_VERIFICATION_CERT (REVERSE only)
+- Context: server-specific
+- CA certificate chain to validate SSL connection to target hosts (optional - tls won't ve verified if no cert is provided)
 - Default: `443`
