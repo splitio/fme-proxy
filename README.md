@@ -125,7 +125,51 @@ As mentioned above, the applications supports listening on multiple ports, each 
 - Context: server-specific
 - Comma separated list of ports to which tunnels can be established. It must include all ports specified in `HP_<server_name>_ALLOWED_TARGETS` if != "*"
 - Default: `443`
+#### HP_&lt;server_name&gt;_LOCATIONS (REVERSE only)
+- Context: server-specific
+- Comma-separated list of locations definitions for a reverse proxy. See section below for more detailed information on how to specify locations
+- Default: <empty>
 #### HP_&lt;server_name&gt;_LOCATIONS_SSL_VERIFICATION_CERT (REVERSE only)
 - Context: server-specific
 - CA certificate chain to validate SSL connection to target hosts (optional - tls won't ve verified if no cert is provided)
 - Default: `443`
+
+### Reverse proxy location definition
+When using a reverse-proxy server, you can specify pre-defined locations supported by harness via presets or create custom ones and make them available via an external mount volume and reference them from the config generation scripts.
+
+#### Presets
+Preset location files reference URLs for services provided by Harness modules
+
+##### FME
+FME preset can be referenced by including `PRESET:fme` in the HP_&lt;server_name&gt;_LOCATIONS variable, and includes the following paths, which should be specified in the URL overrides of the FME SDK:
+- "https://sdk.split.io"
+- "https://events.split.io"
+- "https://auth.split.io"
+- "https://streaming.split.io"
+- "https://telemetry.split.io"
+
+#### Custom
+If you need to prpovide custom locations for an external service, you should do so by creating a [JSONL file](https://jsonlines.org/examples/) consisting of one location definition per line. Each location should be an object containing at least `path` & `target` properties. Below is a list of all supported properties
+
+##### Config options
+###### path
+- Description: local mount path (URL used by the clients to reference the proxied host)
+- Default: <empty> (mandatory)
+###### target
+- Description: URL of the host where requests will be proxied to
+- Default: <empty> (mandatory)
+###### buffer
+- Description: Whether responses sent to client should be buffered or not
+- Default: true
+###### read_timeout
+- Description: Socket read timeout in seconds (useful for streaming endpoints which might keep connection alive for a while without sending data)
+- Default: 30 seconds
+
+##### Example config for FME
+```
+{ "path": "/fme/sdk", "target": "https://sdk.split.io" }
+{ "path": "/fme/events", "target": "https://events.split.io" }
+{ "path": "/fme/auth", "target": "https://auth.split.io" }
+{ "path": "/fme/streaming", "target": "https://streaming.split.io", "read_timeout": 120, "buffer": false  }
+{ "path": "/fme/telemetry", "target": "https://telemetry.split.io" }
+```

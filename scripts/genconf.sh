@@ -349,8 +349,6 @@ function gen_rp_server_section() {
         return "${ret}"
     fi
     
-    echo "VERIF: ${verif}" >&2
-
     ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v proxy_thru_block="${proxy_thru_block}" \
         -v resolver="${resolver}" -v locations="${locations}" -v ssl_verify_block="${verif}" \
         '{
