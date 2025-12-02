@@ -179,7 +179,8 @@ function test_reverse_proxy() {
     local streaming="$(_get_section "${http}" 'location "/fme/streaming"')"
     assert_eq "$(_get_prop "${streaming}" "rewrite")" '^/fme/streaming(.*)$ $1 break' "unexpected rewrite"
     assert_eq "$(_get_prop "${streaming}" "proxy_ssl_server_name")" 'on' "unexpected proxy_ssl_server_name"
-    assert_eq "$(_get_prop "${streaming}" "proxy_read_timeout")" '30s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${streaming}" "proxy_read_timeout")" '120s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${streaming}" "proxy_buffering")" 'off' "unexpected proxy read timeout"
     assert_eq "$(_get_prop "${streaming}" "proxy_pass")" 'https://streaming.split.io' "unexpected proxy_pass"
 
 

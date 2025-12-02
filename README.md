@@ -28,8 +28,8 @@ Allows the user to sign tokens with it's own private key, that the proxy can the
 ### Quickstart
 
 1. Get the image `docker pull splitsoftware/fme-proxy`
-2. Run the image with the desired configuration (more on config later on): `docker run --rm --name some-fme-proxy -e HP_PROXIES=main -e HP_main_PORT=3128 splitsoftware/fme-proxy`.
-3. Test with curl: `curl -v --proxy https://harness-fproxy:3128 -XGET https://sdk.split.io`.
+2. Run the image with the desired configuration (more on config later on): `docker run --rm --name some-fme-proxy -e HP_PROXIES=main -e HP_main_PORT=3128 -p 3128:3128 splitsoftware/fme-proxy:ubuntu`.
+3. Test with curl: `curl -v --proxy http://127.0.0.1:3128 -XGET https://sdk.split.io/api/version`.
  
 ### In-depth configuration
 As mentioned above, the applications supports listening on multiple ports, each with different SSL & authentication requirements. These instances are called `server`s and are listed in the `HP_PROXIES` variable in a comma-separated list (no spaces, just comma). All server-specific configurations follow the format `HP_&lt;server_name&gt;_<config_option>`
@@ -149,7 +149,7 @@ FME preset can be referenced by including `PRESET:fme` in the HP_&lt;server_name
 - "https://telemetry.split.io"
 
 #### Custom
-If you need to prpovide custom locations for an external service, you should do so by creating a [JSONL file](https://jsonlines.org/examples/) consisting of one location definition per line. Each location should be an object containing at least `path` & `target` properties. Below is a list of all supported properties
+If you need to provide custom locations for an external service, you should do so by creating a [JSONL file](https://jsonlines.org/examples/) consisting of one location definition per line. Each location should be an object containing at least `path` & `target` properties. Below is a list of all supported properties
 
 ##### Config options
 ###### path
