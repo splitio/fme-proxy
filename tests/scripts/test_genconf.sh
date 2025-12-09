@@ -39,7 +39,7 @@ function test_defaults_and_simple_server() {
 
     local version_location="$(_get_section "${version}" "location /version")"
     assert_eq "$(_get_prop "${version_location}" "default_type")"  "text/plain" "unexpected default_type in version location"
-    assert_eq "$(_get_inline_section "${version_location}" "content_by_lua_block")" "ngx.say(\"1.0.0\")" "unexpected version content block"
+    assert_eq "$(_get_inline_section "${version_location}" "content_by_lua_block")" "ngx.say(\"1.1.0\")" "unexpected version content block"
 
     local p1="$(_get_named_section "${http}" "server" "p1")"
     assert_eq "$(_get_prop "${p1}" "listen")" "3128" "unexpected port"
@@ -134,6 +134,65 @@ function test_tls_bearer_auth() {
     assert_eq "$(_get_prop "${p1}" "rewrite_by_lua_file")" "/opt/openresty/lua/proxy_auth_bearer.lua" "unexpected header rewrite file"
 }
 
+function test_reverse_proxy() {
+
+    local conf=$(HP_PROXIES=p1 \
+        RP_PRESETS_PATH="${PROJECT_DIR}/rplocations" \
+        HP_p1_PORT=3128 \
+        HP_p1_SSL=true \
+        HP_p1_SSL_CERTIFICATE=cert.crt \
+        HP_p1_SSL_PRIVATE_KEY=pk.key \
+        HP_p1_TYPE=REVERSE \
+        HP_p1_LOCATIONS="PRESET:fme" \
+        HP_p1_LOCATIONS_SSL_VERIFICATION_CERT="ca.crt" \
+        bash "${GENCONF}")
+
+    local http=$(_get_section "${conf}" "http")
+    local p1="$(_get_named_section "${http}" "server" "p1")"
+    assert_eq "$(_get_prop "${p1}" "listen")" "3128 ssl" "unexpected port or (lack of) ssl directive"
+    assert_eq "$(_get_prop "${p1}" "ssl_certificate")" "cert.crt" "unexpected server certificate"
+    assert_eq "$(_get_prop "${p1}" "ssl_certificate_key")" "pk.key" "unexpected server certificate key"
+    assert_eq "$(_get_prop "${p1}" "ssl_session_cache")" "shared:SSL:1m" "unexpected ssl session cache"
+    assert_eq "$(_get_prop "${p1}" "proxy_ssl_verify")" "on" "unexpected ssl verify value"
+    assert_eq "$(_get_prop "${p1}" "proxy_ssl_trusted_certificate")" "ca.crt" "unexpected proxy ssl trusted cert"
+
+    local sdk="$(_get_section "${http}" 'location "/fme/sdk"')"
+    assert_eq "$(_get_prop "${sdk}" "rewrite")" '^/fme/sdk(.*)$ $1 break' "unexpected rewrite"
+    assert_eq "$(_get_prop "${sdk}" "proxy_ssl_server_name")" 'on' "unexpected proxy_ssl_server_name"
+    assert_eq "$(_get_prop "${sdk}" "proxy_read_timeout")" '30s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${sdk}" "proxy_pass")" 'https://sdk.split.io' "unexpected proxy_pass"
+
+    local events="$(_get_section "${http}" 'location "/fme/events"')"
+    assert_eq "$(_get_prop "${events}" "rewrite")" '^/fme/events(.*)$ $1 break' "unexpected rewrite"
+    assert_eq "$(_get_prop "${events}" "proxy_ssl_server_name")" 'on' "unexpected proxy_ssl_server_name"
+    assert_eq "$(_get_prop "${events}" "proxy_read_timeout")" '30s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${events}" "proxy_pass")" 'https://events.split.io' "unexpected proxy_pass"
+
+
+    local auth="$(_get_section "${http}" 'location "/fme/auth"')"
+    assert_eq "$(_get_prop "${auth}" "rewrite")" '^/fme/auth(.*)$ $1 break' "unexpected rewrite"
+    assert_eq "$(_get_prop "${auth}" "proxy_ssl_server_name")" 'on' "unexpected proxy_ssl_server_name"
+    assert_eq "$(_get_prop "${auth}" "proxy_read_timeout")" '30s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${auth}" "proxy_pass")" 'https://auth.split.io' "unexpected proxy_pass"
+
+
+    local streaming="$(_get_section "${http}" 'location "/fme/streaming"')"
+    assert_eq "$(_get_prop "${streaming}" "rewrite")" '^/fme/streaming(.*)$ $1 break' "unexpected rewrite"
+    assert_eq "$(_get_prop "${streaming}" "proxy_ssl_server_name")" 'on' "unexpected proxy_ssl_server_name"
+    assert_eq "$(_get_prop "${streaming}" "proxy_read_timeout")" '120s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${streaming}" "proxy_buffering")" 'off' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${streaming}" "proxy_pass")" 'https://streaming.split.io' "unexpected proxy_pass"
+
+
+    local telemetry="$(_get_section "${http}" 'location "/fme/telemetry"')"
+    assert_eq "$(_get_prop "${telemetry}" "rewrite")" '^/fme/telemetry(.*)$ $1 break' "unexpected rewrite"
+    assert_eq "$(_get_prop "${telemetry}" "proxy_ssl_server_name")" 'on' "unexpected proxy_ssl_server_name"
+    assert_eq "$(_get_prop "${telemetry}" "proxy_read_timeout")" '30s' "unexpected proxy read timeout"
+    assert_eq "$(_get_prop "${telemetry}" "proxy_pass")" 'https://telemetry.split.io' "unexpected proxy_pass"
+
+
+}
+
 # Internal config parsing functions
 
 function _get_section() {
@@ -142,10 +201,11 @@ function _get_section() {
 
     awk -v section"=${section} {" \
         'BEGIN { nested=0; }
-        $0 ~ /\{/ { nested++; }
+        $0 ~ section {s=1; nested=1; next}
+        $0 ~ /\{/ && s == 1 { nested++; }
         $0 ~ /\}/ { nested--; if (nested == 0) { s=0; } }
         s == 1 && nested > 0
-        $0 ~ section {s=1}' <<< "${context}"
+' <<< "${context}"
 }
 
 function _get_named_section() {
@@ -218,3 +278,4 @@ test_tls_basic_auth
 test_plain_digest_auth
 test_mtls
 test_tls_bearer_auth
+test_reverse_proxy

@@ -3,6 +3,7 @@
 ############## errors
 readonly ERR_NO_SERVERS=100
 readonly ERR_NO_PORT=101
+readonly ERR_INVALID_PROXY_TYPE=102
 readonly ERR_SSL_NO_KEY=110
 readonly ERR_SSL_NO_CERT=111
 readonly ERR_SSL_NO_CLIENT_CERT=112
@@ -11,7 +12,12 @@ readonly ERR_AUTH_NO_BASIC_PASSWD=121
 readonly ERR_AUTH_NO_DIGEST_PASSWD=123
 readonly ERR_AUTH_NO_BEARER_JWKS=123
 readonly ERR_THRU_NO_PROXY_CACERT=130
+readonly ERR_RP_INVALID_SCHEME=150
+readonly ERR_RP_FILE_NOT_FOUND=151
+readonly ERR_RP_NO_VERIFICATION_CERT=152
 ##############
+
+readonly RP_PRESETS_PATH="${RP_PRESETS_PATH:-/opt/openresty/rppresets}"
 
 ############## templates declaration
 
@@ -70,7 +76,7 @@ http {
 }
 EOF
 
-read -r -d '' SERVER_DEFINITION <<"EOF"
+read -r -d '' FORWARD_PROXY_SERVER_DEFINITION <<"EOF"
     # {{NAME}}
     server {
         listen                         {{PORT}} {{SSL}};
@@ -91,6 +97,32 @@ read -r -d '' SERVER_DEFINITION <<"EOF"
 
 {{PROXY_THRU_BLOCK}}
 {{HOST_WHITELIST_BLOCK}}
+
+        location / {
+        }
+
+    }
+EOF
+
+read -r -d '' REVERSE_PROXY_SERVER_DEFINITION <<"EOF"
+    # {{NAME}}
+    server {
+        listen                         {{PORT}} {{SSL}};
+
+        root /var/www;
+
+{{SSL_BLOCK}}
+
+        # dns resolver used by forward proxying
+        resolver                       {{RESOLVER}} ipv6=off;
+
+{{PROXY_THRU_BLOCK}}
+
+{{TARGET_HOST_SSL_VERIFICATION_BLOCK}}
+
+        # reverse proxy locations
+{{LOCATIONS}}
+
 
         location / {
         }
@@ -171,12 +203,29 @@ read -r -d '' STATS_BLOCK << "EOF"
 
 EOF
 
+read -r -d '' LOCATION_BLOCK << "EOF"
+        location "{{PATH}}" {
+            rewrite ^{{PATH}}(.*)$ $1 break;
+            {{SNI_SEND_LINE}}
+            {{READ_TIMEOUT_LINE}}
+            {{BUFFER_LINE}}
+            proxy_pass {{TARGET}} {{PROXY_THRU}};
+        }
+    
+EOF
+
+read -r -d '' TARGET_HOST_SSL_VERIFICATION_BLOCK << "EOF"
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate {{CERT}};
+EOF
+
+
 IFS=${IFS_BAK}
 
 
 ############## internal functions
 
-function gen_server_section() {
+function gen_fp_server_section() {
     local id="${1}"
 
     local port=$(get_var ${id} PORT)
@@ -209,7 +258,7 @@ function gen_server_section() {
         return "${ret}"
     fi
 
-    local proxy_thru_block=$(gen_proxy_thru_block "${id}")
+    local proxy_thru_block=$(gen_proxy_thru_block "${id}"); ret=${?}
     if [ ${ret} -ne 0 ]; then
         return "${ret}"
     fi
@@ -232,7 +281,87 @@ function gen_server_section() {
             sub("{{PROXY_THRU_BLOCK}}", proxy_thru_block);
             sub("{{RESOLVER}}", resolver);
             sub("{{HOST_WHITELIST_BLOCK}}", target_whitelist_block);
-        };1' <<< "${SERVER_DEFINITION}"
+        };1' <<< "${FORWARD_PROXY_SERVER_DEFINITION}"
+}
+
+function get_loc_fn() {
+    local loc_definition="${1}"
+    local loc_scheme=$(awk -F':' '{ print $1 }' <<<"${loc_definition}")
+    local loc_value=$(awk -F':' '{ print $2 }' <<<"${loc_definition}")
+
+    case "${loc_scheme}" in
+        CUSTOM)
+            printf "%s\n" "${loc_value}"
+            ;;
+        PRESET)
+            printf "%s\n" "${RP_PRESETS_PATH}/${loc_value}.jsonl"
+            ;;
+        *)
+            return "${ERR_RP_INVALID_SCHEME}"
+            ;;
+    esac
+
+}
+
+function gen_rp_server_section() {
+    local id="${1}"
+
+    local port=$(get_var ${id} PORT)
+    [ -z "${port}" ] && log_error "Server '${id}' is missing port, which is mandatory. Aborting" && return "${ERR_NO_PORT}"
+
+    local ssl
+    local ssl_block
+    if [[ $(get_var ${id} SSL) == "true" ]]; then
+        ssl="ssl"
+        ssl_block=$(gen_ssl_block ${id}); ret=${?}
+        if [ ${ret} -ne 0 ]; then
+            return "${ret}"
+        fi
+    fi
+
+    local proxy_thru_block=$(gen_proxy_thru_block "${id}"); ret=${?}
+    if [ ${ret} -ne 0 ]; then
+        return "${ret}"
+    fi
+
+    local resolver=$(get_var "${id}" RESOLVER_IP)
+    if [ -z "${resolver}" ]; then
+        resolver="8.8.8.8"
+    fi
+
+    local locations_raw=$(get_var ${id} LOCATIONS)
+    local locations=""
+    while read -r -d ',' loc_raw; do
+        loc_fn=$(get_loc_fn "${loc_raw}"); ret=${?}
+        if [ ${ret} -ne 0 ]; then
+            return "${ret}"
+        fi
+
+        locations="${locations}\n$(gen_loc_list "${loc_fn}" "${proxy_thru_block}")"; ret=${?}
+        if [ ${ret} -ne 0 ]; then
+            return "${ret}"
+        fi
+
+    done <<< "${locations_raw},"
+
+    verif=$(gen_target_ssl_verify_block); ret=${?}
+    if [ ${ret} -ne 0 ]; then
+        return "${ret}"
+    fi
+    
+    ${AWK} -v id="${id}" -v port="${port}" -v ssl="${ssl}" -v ssl_block="${ssl_block}" -v proxy_thru_block="${proxy_thru_block}" \
+        -v resolver="${resolver}" -v locations="${locations}" -v ssl_verify_block="${verif}" \
+        '{
+            sub("{{NAME}}", id);
+            sub("{{PORT}}", port);
+            sub("{{SSL}}", ssl);
+            sub("{{SSL_BLOCK}}", ssl_block);
+            sub("{{PROXY_THRU_BLOCK}}", proxy_thru_block);
+            sub("{{RESOLVER}}", resolver);
+            sub("{{LOCATIONS}}", locations);
+            sub("{{TARGET_HOST_SSL_VERIFICATION_BLOCK}}", ssl_verify_block);
+        };1' <<< "${REVERSE_PROXY_SERVER_DEFINITION}"
+
 }
 
 function gen_ssl_block() {
@@ -339,6 +468,77 @@ function gen_stats_block() {
     fi
 }
 
+function gen_target_ssl_verify_block() {
+    cert=$(get_var "${id}" LOCATIONS_SSL_VERIFICATION_CERT)
+    if [ -z "${cert}" ]; then
+        return
+    fi
+
+    ${AWK} -v cert="${cert}" '{sub("{{CERT}}", cert)};1' <<< "${TARGET_HOST_SSL_VERIFICATION_BLOCK}"
+
+}
+
+function gen_loc_list() {
+
+    local locations_fn="${1}"
+
+    [ ! -f "${locations_fn}" ] && return "${ERR_RP_FILE_NOT_FOUND}"
+
+    local pthru="${2}"
+    if [ ! -z "${pthru}" ]; then
+        pthru="proxy_thru"
+    fi
+
+    regex_path="\"path\":[[:space:]]+\"([^\"]+)\""
+    regex_target="\"target\":[[:space:]]+\"([^\"]+)\""
+    regex_read_timeout="\"read_timeout\":[[:space:]]*([0-9]+)"
+    regex_buffer="\"buffer\":[[:space:]]*(true|false)"
+    https_regex="^https://"
+
+    while read line ; do
+        path=""
+        target=""
+        timeout="30"
+        buffer="true"
+        if [[ $line =~ $regex_path ]]; then
+            path="${BASH_REMATCH[1]}"
+        fi
+        if [[ $line =~ $regex_target ]]; then
+            target="${BASH_REMATCH[1]}"
+        fi
+        if [[ $line =~ $regex_read_timeout ]]; then
+            timeout="${BASH_REMATCH[1]}"
+        fi
+        if [[ $line =~ $regex_buffer ]]; then
+            buffer="${BASH_REMATCH[1]}"
+        fi
+
+        local sni_line=""
+        if [[ $target =~ $https_regex ]]; then
+            # TODO(mredolatti) add check for pthru == "". otherwise this is unnecessary
+            sni_line="proxy_ssl_server_name on;"
+        fi
+
+        local buffer_line=""
+        if [[ ${buffer} == "false" ]]; then
+            buffer_line="proxy_buffering off;"
+        fi
+
+        rt_line="proxy_read_timeout ${timeout}s;"
+
+        awk -v path="${path}" -v target="${target}" -v pthru="${pthru}" -v sni_line="${sni_line}" \
+            -v rt_line="${rt_line}" -v buffer_line="${buffer_line}" \
+            '{
+                sub("{{PATH}}", path);
+                sub("{{TARGET}}", target);
+                sub("{{PROXY_THRU}}", pthru);
+                sub("{{SNI_SEND_LINE}}", sni_line);
+                sub("{{BUFFER_LINE}}", buffer_line);
+                sub("{{READ_TIMEOUT_LINE}}", rt_line);
+            };1' <<<"${LOCATION_BLOCK}"
+    done <"${locations_fn}"
+}
+
 ############## main execution flow
 
 HP_VERSION_FILE="${HP_VERSION_FILE:-/.version}"
@@ -350,7 +550,17 @@ source "${SCRIPT_DIR}/commons.sh"
 
 server_definitions=""
 while read -r -d ',' sid; do
-    server_definitions="${server_definitions}\n$(gen_server_section ${sid})"; ret=${?}
+    case $(get_var ${sid} TYPE) in
+        FORWARD|"") # default
+            server_definitions="${server_definitions}\n$(gen_fp_server_section ${sid})"; ret=${?}
+            ;;
+        REVERSE)
+            server_definitions="${server_definitions}\n$(gen_rp_server_section ${sid})"; ret=${?}
+            ;;
+        *)
+            exit ${ERR_INVALID_PROXY_TYPE}
+            ;;
+    esac
     if [ ${ret} -ne 0 ]; then
         exit ${ret}
     fi
