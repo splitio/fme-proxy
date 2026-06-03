@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM redhat/ubi10:latest AS builder
 
 ENV OPENRESTY_VERSION="1.27.1.2"
@@ -31,9 +32,6 @@ RUN yum -y clean all --enablerepo='*'
 RUN mkdir -p /tmp/openresty
 WORKDIR /tmp/openresty
 
-# TODO: REMOVE THIS ONCE proxy_thru repo is public
-COPY .netrc /root
-
 # 1. PCRE
 RUN wget https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.45/pcre2-${PCRE2_VERSION}.tar.bz2
 RUN bzip2 -d pcre2-${PCRE2_VERSION}.tar.bz2
@@ -57,7 +55,9 @@ RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
 RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. proxy-thru module
-RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
+# TODO: REMOVE secret mount ONCE proxy_thru repo is public
+RUN --mount=type=secret,id=ghtoken \
+    git clone "https://devops-split:$(cat /run/secrets/ghtoken)@github.com/splitio/ngx_http_proxy_thru_module"
 RUN cd ngx_http_proxy_thru_module && git checkout v1.1.0
 
 # 6. openresty
