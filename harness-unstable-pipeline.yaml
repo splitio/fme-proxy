@@ -76,19 +76,6 @@ pipeline:
                     command: |-
                       set -e
 
-                      # TODO: remove once proxy_thru repo is public
-                      # Verify the secret actually resolved to plaintext (not a Harness functor)
-                      case "${GITHUB_TOKEN}" in
-                        ""|*ngSecretManager*|*"<+secrets"*)
-                          echo "FATAL: 'devops-readonly-github-token' did NOT resolve to plaintext."
-                          echo "       It is likely defined at a different scope. Update the secret"
-                          echo "       reference in envVariables below to match its scope:"
-                          echo "         org-level     -> <+secrets.getValue(\"org.devops-readonly-github-token\")>"
-                          echo "         account-level -> <+secrets.getValue(\"account.devops-readonly-github-token\")>"
-                          exit 1;;
-                      esac
-                      echo "GitHub token resolved OK (length ${#GITHUB_TOKEN})"
-
                       SHORT_SHA=$(git rev-parse --short HEAD)
                       PLATFORM_TAG=$(echo "${MATRIX_PLATFORM}" | tr '/' '-')
 
@@ -108,7 +95,7 @@ pipeline:
                         --push \
                         .
                     envVariables:
-                      GITHUB_TOKEN: <+secrets.getValue("devops-readonly-github-token")>
+                      GITHUB_TOKEN: <+secrets.getValue("github-devops-token")>
                       MATRIX_OS: <+matrix.os>
                       MATRIX_PLATFORM: <+matrix.platform>
         strategy:
