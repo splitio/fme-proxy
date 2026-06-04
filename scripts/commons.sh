@@ -28,3 +28,5 @@ function item_is_in_array() {
 # ensure GNU awk is installed
 [[ $(uname) == "Darwin" ]] && AWK="gawk" || AWK="gawk"
 which ${AWK} > /dev/null || (log_error "GNU awk not found. If running on osx, try 'brew install gawk'" && exit 1)
+
+# dummy change
