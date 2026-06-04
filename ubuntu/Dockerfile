@@ -63,7 +63,8 @@ RUN ./configure \
     --sbin-path=/opt/openresty/sbin/nginx \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
-    --http-log-path=/var/log/nginx/error.log
+    --http-log-path=/var/log/nginx/error.log \
+    || (cat build/nginx-*/objs/autoconf.err 2>/dev/null || true; cat /tmp/openresty/pcre2-${PCRE2_VERSION}/config.log 2>/dev/null || true; exit 1)
 RUN patch \
     --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
     --strip 1 \
