@@ -13,7 +13,37 @@ pipeline:
         depth: 50
   stages:
     # ----------------------------------------------------------------
-    # Stage 1 — Build platform-specific images (matrix: os × platform)
+    # Stage 1 — Run bash script tests
+    # ----------------------------------------------------------------
+    - stage:
+        identifier: test_scripts
+        type: CI
+        name: Test bash scripts
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  identifier: run_tests
+                  type: Run
+                  name: Run genconf tests
+                  spec:
+                    shell: Bash
+                    command: make test-scripts
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: MarkAsFailure
+    # ----------------------------------------------------------------
+    # Stage 2 — Build platform-specific images (matrix: os × platform)
     # ----------------------------------------------------------------
     - stage:
         name: Build Platform Specific Image
@@ -99,7 +129,7 @@ pipeline:
               action:
                 type: MarkAsFailure
     # ----------------------------------------------------------------
-    # Stage 2 — Merge multi-arch manifests (matrix: os)
+    # Stage 3 — Merge multi-arch manifests (matrix: os)
     # Runs after all bps iterations complete.
     # ----------------------------------------------------------------
     - stage:
