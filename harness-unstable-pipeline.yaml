@@ -100,6 +100,7 @@ pipeline:
 
                       # Token is passed as a BuildKit secret — never baked into any image layer
                       docker buildx build \
+                        --secret id=ghtoken,env=GITHUB_TOKEN \
                         --file "${MATRIX_OS}/Dockerfile" \
                         --platform "${MATRIX_PLATFORM}" \
                         --secret id=ghtoken,env=GITHUB_TOKEN \
