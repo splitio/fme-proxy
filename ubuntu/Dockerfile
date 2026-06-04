@@ -40,7 +40,7 @@ RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
 RUN cd ngx_http_proxy_connect_module && git checkout v0.0.7
 
 # 3.jwt module
-RUN git clone https://github.com/kjdev/nginx-auth-jwt
+RUN git clone --recurse-submodules https://github.com/kjdev/nginx-auth-jwt
 
 # 4. digest auth module
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
@@ -63,8 +63,7 @@ RUN ./configure \
     --sbin-path=/opt/openresty/sbin/nginx \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
-    --http-log-path=/var/log/nginx/error.log \
-    || (cat build/nginx-*/objs/autoconf.err 2>/dev/null || true; cat /tmp/openresty/pcre2-${PCRE2_VERSION}/config.log 2>/dev/null || true; exit 1)
+    --http-log-path=/var/log/nginx/error.log
 RUN patch \
     --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
     --strip 1 \
