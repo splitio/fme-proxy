@@ -90,9 +90,9 @@ pipeline:
                       echo "GitHub token resolved OK (length ${#GITHUB_TOKEN})"
 
                       SHORT_SHA=$(git rev-parse --short HEAD)
-                      PLATFORM_TAG=$(echo "<+matrix.platform>" | tr '/' '-')
+                      PLATFORM_TAG=$(echo "${MATRIX_PLATFORM}" | tr '/' '-')
 
-                      IMAGE="harness0.harness.io/oci/fme-docker/fme-proxy-<+matrix.os>"
+                      IMAGE="harness0.harness.io/oci/fme-docker/fme-proxy-${MATRIX_OS}"
                       TAG="sha-${SHORT_SHA}"
 
                       docker buildx create --use --name builder
@@ -100,14 +100,16 @@ pipeline:
 
                       # Token is passed as a BuildKit secret — never baked into any image layer
                       docker buildx build \
-                        --file "<+matrix.os>/Dockerfile" \
-                        --platform "<+matrix.platform>" \
+                        --file "${MATRIX_OS}/Dockerfile" \
+                        --platform "${MATRIX_PLATFORM}" \
                         --secret id=ghtoken,env=GITHUB_TOKEN \
                         --tag "${IMAGE}:${TAG}-${PLATFORM_TAG}" \
                         --push \
                         .
                     envVariables:
                       GITHUB_TOKEN: <+secrets.getValue("devops-readonly-github-token")>
+                      MATRIX_OS: <+matrix.os>
+                      MATRIX_PLATFORM: <+matrix.platform>
         strategy:
           matrix:
             os:
