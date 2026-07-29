@@ -22,7 +22,7 @@ pipeline:
           runtime:
             type: Cloud
             spec:
-              size: Standard
+              size: flex
           execution:
             steps:
               - step:
