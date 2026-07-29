@@ -30,7 +30,5 @@ pipeline:
                   name: run_genconf_tests
                   identifier: run_genconf_tests
                   spec:
-                    connectorRef: dockerhub
-                    image: ubuntu:24.04
                     shell: Bash
                     command: make test-scripts
