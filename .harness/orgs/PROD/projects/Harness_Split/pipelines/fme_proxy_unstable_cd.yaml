@@ -33,6 +33,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY: confirm secret name
                     command: envsubst < .netrc.tpl > .netrc
@@ -73,6 +75,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
                     command: envsubst < .netrc.tpl > .netrc
@@ -113,6 +117,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
                     command: envsubst < .netrc.tpl > .netrc
@@ -153,6 +159,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
                     command: envsubst < .netrc.tpl > .netrc
@@ -192,6 +200,8 @@ pipeline:
                   name: ecr_login
                   identifier: ecr_login
                   spec:
+                    connectorRef: dockerhub
+                    image: amazon/aws-cli:latest
                     shell: Bash
                     envVariables:
                       ECR_TESTING_URL: <+secrets.getValue("ECR_TESTING_URL")>  # VERIFY: was vars.ECR_TESTING_URL in GHA
@@ -204,6 +214,8 @@ pipeline:
                   name: create_ubuntu_manifest
                   identifier: create_ubuntu_manifest
                   spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
                     shell: Bash
                     envVariables:
                       ECR_TESTING_URL: <+secrets.getValue("ECR_TESTING_URL")>  # VERIFY
@@ -220,6 +232,8 @@ pipeline:
                   name: create_redhat_manifest
                   identifier: create_redhat_manifest
                   spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
                     shell: Bash
                     envVariables:
                       ECR_TESTING_URL: <+secrets.getValue("ECR_TESTING_URL")>  # VERIFY

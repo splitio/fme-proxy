@@ -33,6 +33,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY: GHA used secrets.DEVOPS_READONLY_GITHUB_TOKEN
                     command: envsubst < .netrc.tpl > .netrc
@@ -71,6 +73,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
                     command: envsubst < .netrc.tpl > .netrc
@@ -109,6 +113,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
                     command: envsubst < .netrc.tpl > .netrc
@@ -147,6 +153,8 @@ pipeline:
                   identifier: setup_netrc
                   spec:
                     shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
                     command: envsubst < .netrc.tpl > .netrc
@@ -184,6 +192,8 @@ pipeline:
                   name: get_version
                   identifier: get_version
                   spec:
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
                     shell: Bash
                     command: echo "VERSION=$(cat VERSION)" >> $HARNESS_ENV
               - step:
@@ -191,6 +201,8 @@ pipeline:
                   name: docker_login
                   identifier: docker_login
                   spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
                     shell: Bash
                     envVariables:
                       DOCKERHUB_USERNAME: <+secrets.getValue("DOCKERHUB_USERNAME")>  # VERIFY: was vars.DOCKERHUB_USERNAME in GHA
@@ -201,6 +213,8 @@ pipeline:
                   name: create_ubuntu_manifest
                   identifier: create_ubuntu_manifest
                   spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
                     shell: Bash
                     command: |
                       SHA=<+codebase.shortCommitSha>
@@ -217,6 +231,8 @@ pipeline:
                   name: create_redhat_manifest
                   identifier: create_redhat_manifest
                   spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
                     shell: Bash
                     command: |
                       SHA=<+codebase.shortCommitSha>
