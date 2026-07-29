@@ -31,4 +31,4 @@ pipeline:
                   identifier: run_genconf_tests
                   spec:
                     shell: Bash
-                    command: make test-scripts
+                    command: bash tests/scripts/test_genconf.sh
