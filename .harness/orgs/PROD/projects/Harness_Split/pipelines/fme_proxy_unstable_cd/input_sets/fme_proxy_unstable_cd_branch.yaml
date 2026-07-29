@@ -1,0 +1,14 @@
+inputSet:
+  name: fme_proxy_unstable_cd_branch
+  identifier: fme_proxy_unstable_cd_branch
+  orgIdentifier: PROD
+  projectIdentifier: Harness_Split
+  pipeline:
+    identifier: fme_proxy_unstable_cd
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>

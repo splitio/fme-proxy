@@ -1,0 +1,235 @@
+pipeline:
+  name: fme_proxy_unstable_cd
+  identifier: fme_proxy_unstable_cd
+  orgIdentifier: PROD
+  projectIdentifier: Harness_Split
+  properties:
+    ci:
+      codebase:
+        connectorRef: fmegithubrunnersci
+        repoName: fme-proxy
+        build: <+input>
+        depth: 0
+  stages:
+    # Build ubuntu amd64 and push to ECR testing registry
+    - stage:
+        name: build_ubuntu_amd64
+        identifier: build_ubuntu_amd64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: Standard
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY: confirm secret name
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: <+input>  # VERIFY: need an AWS connector that can assume ECR_TESTING_ROLE_ARN
+                    region: us-east-1
+                    account: <+input>  # VERIFY: ECR account number (from vars.ECR_TESTING_URL)
+                    imageName: fme-proxy-ubuntu  # VERIFY: ECR repo name within ECR_TESTING_URL
+                    dockerfile: ubuntu/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-amd64
+                    optimize: true
+
+    # Build ubuntu arm64
+    - stage:
+        name: build_ubuntu_arm64
+        identifier: build_ubuntu_arm64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec:
+              size: Standard
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: <+input>  # VERIFY
+                    region: us-east-1
+                    account: <+input>  # VERIFY
+                    imageName: fme-proxy-ubuntu  # VERIFY
+                    dockerfile: ubuntu/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-arm64
+                    optimize: true
+
+    # Build redhat amd64
+    - stage:
+        name: build_redhat_amd64
+        identifier: build_redhat_amd64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: Standard
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: <+input>  # VERIFY
+                    region: us-east-1
+                    account: <+input>  # VERIFY
+                    imageName: fme-proxy-redhat  # VERIFY
+                    dockerfile: redhat/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-amd64
+                    optimize: true
+
+    # Build redhat arm64
+    - stage:
+        name: build_redhat_arm64
+        identifier: build_redhat_arm64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec:
+              size: Standard
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: <+input>  # VERIFY
+                    region: us-east-1
+                    account: <+input>  # VERIFY
+                    imageName: fme-proxy-redhat  # VERIFY
+                    dockerfile: redhat/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-arm64
+                    optimize: true
+
+    # Assemble multi-arch manifest lists in ECR
+    - stage:
+        name: merge_manifests
+        identifier: merge_manifests
+        type: CI
+        spec:
+          cloneCodebase: false
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: Standard
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: ecr_login
+                  identifier: ecr_login
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      ECR_TESTING_URL: <+secrets.getValue("ECR_TESTING_URL")>  # VERIFY: was vars.ECR_TESTING_URL in GHA
+                      AWS_REGION: us-east-1
+                    command: |
+                      aws ecr get-login-password --region ${AWS_REGION} | \
+                        docker login --username AWS --password-stdin ${ECR_TESTING_URL}
+              - step:
+                  type: Run
+                  name: create_ubuntu_manifest
+                  identifier: create_ubuntu_manifest
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      ECR_TESTING_URL: <+secrets.getValue("ECR_TESTING_URL")>  # VERIFY
+                    command: |
+                      SHA=<+codebase.shortCommitSha>
+                      REGISTRY_IMAGE="${ECR_TESTING_URL}/fme-proxy-ubuntu"  # VERIFY: ECR repo path
+                      docker buildx imagetools create \
+                        -t "${REGISTRY_IMAGE}:sha-${SHA}" \
+                        "${REGISTRY_IMAGE}:sha-${SHA}-amd64" \
+                        "${REGISTRY_IMAGE}:sha-${SHA}-arm64"
+                      docker buildx imagetools inspect "${REGISTRY_IMAGE}:sha-${SHA}"
+              - step:
+                  type: Run
+                  name: create_redhat_manifest
+                  identifier: create_redhat_manifest
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      ECR_TESTING_URL: <+secrets.getValue("ECR_TESTING_URL")>  # VERIFY
+                    command: |
+                      SHA=<+codebase.shortCommitSha>
+                      REGISTRY_IMAGE="${ECR_TESTING_URL}/fme-proxy-redhat"  # VERIFY: ECR repo path
+                      docker buildx imagetools create \
+                        -t "${REGISTRY_IMAGE}:sha-${SHA}" \
+                        "${REGISTRY_IMAGE}:sha-${SHA}-amd64" \
+                        "${REGISTRY_IMAGE}:sha-${SHA}-arm64"
+                      docker buildx imagetools inspect "${REGISTRY_IMAGE}:sha-${SHA}"
+        when:
+          pipelineStatus: Success
