@@ -36,7 +36,7 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
@@ -76,7 +76,7 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
@@ -116,7 +116,7 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
@@ -156,7 +156,7 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
