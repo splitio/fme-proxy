@@ -31,8 +31,6 @@ pipeline:
                   name: setup_netrc
                   identifier: setup_netrc
                   spec:
-                    connectorRef: dockerhub
-                    image: ubuntu:24.04
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
@@ -50,6 +48,8 @@ pipeline:
                     context: .
                     tags:
                       - sha-<+codebase.shortCommitSha>-amd64
+                    baseImageConnectorRefs:
+                      - dockerhub
                     optimize: true
 
     - stage:
@@ -72,8 +72,6 @@ pipeline:
                   name: setup_netrc
                   identifier: setup_netrc
                   spec:
-                    connectorRef: dockerhub
-                    image: ubuntu:24.04
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
@@ -91,6 +89,8 @@ pipeline:
                     context: .
                     tags:
                       - sha-<+codebase.shortCommitSha>-arm64
+                    baseImageConnectorRefs:
+                      - dockerhub
                     optimize: true
 
     - stage:
@@ -113,8 +113,6 @@ pipeline:
                   name: setup_netrc
                   identifier: setup_netrc
                   spec:
-                    connectorRef: dockerhub
-                    image: ubuntu:24.04
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
@@ -132,6 +130,8 @@ pipeline:
                     context: .
                     tags:
                       - sha-<+codebase.shortCommitSha>-amd64
+                    baseImageConnectorRefs:
+                      - dockerhub
                     optimize: true
 
     - stage:
@@ -154,8 +154,6 @@ pipeline:
                   name: setup_netrc
                   identifier: setup_netrc
                   spec:
-                    connectorRef: dockerhub
-                    image: ubuntu:24.04
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
@@ -173,6 +171,8 @@ pipeline:
                     context: .
                     tags:
                       - sha-<+codebase.shortCommitSha>-arm64
+                    baseImageConnectorRefs:
+                      - dockerhub
                     optimize: true
 
     - stage:
