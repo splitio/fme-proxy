@@ -36,14 +36,14 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY: GHA used secrets.DEVOPS_READONLY_GITHUB_TOKEN
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
                   name: build_and_push
                   identifier: build_and_push
                   spec:
-                    connectorRef: dockerhub  # VERIFY: confirm this is the correct DockerHub connector
+                    connectorRef: dockerhub
                     repo: splitsoftware/fme-proxy-ubuntu
                     dockerfile: ubuntu/Dockerfile
                     context: .
@@ -76,14 +76,14 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
                   name: build_and_push
                   identifier: build_and_push
                   spec:
-                    connectorRef: dockerhub  # VERIFY
+                    connectorRef: dockerhub
                     repo: splitsoftware/fme-proxy-ubuntu
                     dockerfile: ubuntu/Dockerfile
                     context: .
@@ -116,14 +116,14 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
                   name: build_and_push
                   identifier: build_and_push
                   spec:
-                    connectorRef: dockerhub  # VERIFY
+                    connectorRef: dockerhub
                     repo: splitsoftware/fme-proxy-redhat
                     dockerfile: redhat/Dockerfile
                     context: .
@@ -156,14 +156,14 @@ pipeline:
                     connectorRef: dockerhub
                     image: ubuntu:24.04
                     envVariables:
-                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>  # VERIFY
+                      TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
                     command: envsubst < .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushDockerRegistry
                   name: build_and_push
                   identifier: build_and_push
                   spec:
-                    connectorRef: dockerhub  # VERIFY
+                    connectorRef: dockerhub
                     repo: splitsoftware/fme-proxy-redhat
                     dockerfile: redhat/Dockerfile
                     context: .
@@ -205,8 +205,8 @@ pipeline:
                     image: docker:dind
                     shell: Bash
                     envVariables:
-                      DOCKERHUB_USERNAME: <+secrets.getValue("DOCKERHUB_USERNAME")>  # VERIFY: was vars.DOCKERHUB_USERNAME in GHA
-                      DOCKERHUB_RW_TOKEN: <+secrets.getValue("DOCKERHUB_RW_TOKEN")>  # VERIFY: confirm secret name
+                      DOCKERHUB_USERNAME: <+secrets.getValue("DOCKERHUB_USERNAME")>
+                      DOCKERHUB_RW_TOKEN: <+secrets.getValue("DOCKERHUB_RW_TOKEN")>
                     command: echo "${DOCKERHUB_RW_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
               - step:
                   type: Run
