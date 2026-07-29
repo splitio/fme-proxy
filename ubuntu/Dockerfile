@@ -21,7 +21,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     libjansson-dev \
     libssl-dev \
     gawk \
-    -y 
+    perl \
+    -y
 RUN DEBIAN_FRONTEND=noninteractive apt remove --purge --auto-remove -y
 
 RUN mkdir -p /tmp/openresty
@@ -62,8 +63,7 @@ RUN ./configure \
     --sbin-path=/opt/openresty/sbin/nginx \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
-    --http-log-path=/var/log/nginx/error.log \
-    || (cat build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/objs/autoconf.err && exit 1)
+    --http-log-path=/var/log/nginx/error.log
 RUN patch \
     --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
     --strip 1 \
