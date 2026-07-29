@@ -36,7 +36,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
-                    command: envsubst < .netrc.tpl > .netrc
+                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
@@ -77,7 +77,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
-                    command: envsubst < .netrc.tpl > .netrc
+                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
@@ -118,7 +118,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
-                    command: envsubst < .netrc.tpl > .netrc
+                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
@@ -159,7 +159,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("DEVOPS_READONLY_GITHUB_TOKEN")>
-                    command: envsubst < .netrc.tpl > .netrc
+                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
