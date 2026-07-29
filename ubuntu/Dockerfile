@@ -62,7 +62,8 @@ RUN ./configure \
     --sbin-path=/opt/openresty/sbin/nginx \
     --pid-path=/var/run/nginx.pid \
     --error-log-path=/var/log/nginx/access.log \
-    --http-log-path=/var/log/nginx/error.log
+    --http-log-path=/var/log/nginx/error.log \
+    || (cat build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/objs/autoconf.err && exit 1)
 RUN patch \
     --directory build/nginx-${OPENRESTY_NGINX_CORE_VERSION}/ \
     --strip 1 \
