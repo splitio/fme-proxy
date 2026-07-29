@@ -15,8 +15,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     cmake \
     wget \
     git \
-    libpcre3 \
-    libpcre3-dev \
+    libpcre2-dev \
     zlib1g \
     zlib1g-dev \
     libjansson-dev \
@@ -102,7 +101,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     ca-certificates \
     tzdata \
     libjansson-dev \
-    libpcre3 \
+    libpcre2-8-0 \
     zlib1g \
     gawk \
     -y
