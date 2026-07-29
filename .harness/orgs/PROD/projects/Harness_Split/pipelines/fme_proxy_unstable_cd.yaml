@@ -34,7 +34,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("fme-github-netrc-token")>
-                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
@@ -75,7 +75,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("fme-github-netrc-token")>
-                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
@@ -116,7 +116,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("fme-github-netrc-token")>
-                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
@@ -157,7 +157,7 @@ pipeline:
                     shell: Bash
                     envVariables:
                       TOKEN: <+secrets.getValue("fme-github-netrc-token")>
-                    command: sed "s/\$TOKEN/${TOKEN}/" .netrc.tpl > .netrc
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
               - step:
                   type: BuildAndPushECR
                   name: build_and_push
