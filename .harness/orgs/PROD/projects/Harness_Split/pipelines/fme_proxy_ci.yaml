@@ -1,0 +1,34 @@
+pipeline:
+  name: fme_proxy_ci
+  identifier: fme_proxy_ci
+  orgIdentifier: PROD
+  projectIdentifier: Harness_Split
+  properties:
+    ci:
+      codebase:
+        connectorRef: fmegithubrunnersci
+        repoName: fme-proxy
+        build: <+input>
+  stages:
+    - stage:
+        name: test
+        identifier: test
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: run_genconf_tests
+                  identifier: run_genconf_tests
+                  spec:
+                    shell: Bash
+                    command: bash tests/scripts/test_genconf.sh

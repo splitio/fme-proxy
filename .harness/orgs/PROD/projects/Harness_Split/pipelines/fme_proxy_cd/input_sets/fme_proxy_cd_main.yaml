@@ -1,0 +1,14 @@
+inputSet:
+  name: fme_proxy_cd_main
+  identifier: fme_proxy_cd_main
+  orgIdentifier: PROD
+  projectIdentifier: Harness_Split
+  pipeline:
+    identifier: fme_proxy_cd
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>

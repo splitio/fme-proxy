@@ -1,0 +1,176 @@
+pipeline:
+  name: fme_proxy_unstable_cd
+  identifier: fme_proxy_unstable_cd
+  orgIdentifier: PROD
+  projectIdentifier: Harness_Split
+  properties:
+    ci:
+      codebase:
+        connectorRef: fmegithubrunnersci
+        repoName: fme-proxy
+        build: <+input>
+        depth: 0
+  stages:
+    - stage:
+        name: build_ubuntu_amd64
+        identifier: build_ubuntu_amd64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: ecrtesting
+                    region: us-east-1
+                    account: "420799445691"
+                    imageName: fme-proxy-ubuntu
+                    dockerfile: ubuntu/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-amd64
+                    baseImageConnectorRefs:
+                      - dockerhub
+                    optimize: true
+
+    - stage:
+        name: build_ubuntu_arm64
+        identifier: build_ubuntu_arm64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: ecrtesting
+                    region: us-east-1
+                    account: "420799445691"
+                    imageName: fme-proxy-ubuntu
+                    dockerfile: ubuntu/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-arm64
+                    baseImageConnectorRefs:
+                      - dockerhub
+                    optimize: true
+
+    - stage:
+        name: build_redhat_amd64
+        identifier: build_redhat_amd64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: ecrtesting
+                    region: us-east-1
+                    account: "420799445691"
+                    imageName: fme-proxy-redhat
+                    dockerfile: redhat/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-amd64
+                    baseImageConnectorRefs:
+                      - dockerhub
+                    optimize: true
+
+    - stage:
+        name: build_redhat_arm64
+        identifier: build_redhat_arm64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: printf 'machine github.com\n    login devops-split\n    password %s\n' "${TOKEN}" > .netrc
+              - step:
+                  type: BuildAndPushECR
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: ecrtesting
+                    region: us-east-1
+                    account: "420799445691"
+                    imageName: fme-proxy-redhat
+                    dockerfile: redhat/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-arm64
+                    baseImageConnectorRefs:
+                      - dockerhub
+                    optimize: true

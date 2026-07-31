@@ -1,0 +1,246 @@
+pipeline:
+  name: fme_proxy_cd
+  identifier: fme_proxy_cd
+  orgIdentifier: PROD
+  projectIdentifier: Harness_Split
+  properties:
+    ci:
+      codebase:
+        connectorRef: fmegithubrunnersci
+        repoName: fme-proxy
+        build: <+input>
+        depth: 0
+  stages:
+    # Build ubuntu amd64 image and push with a sha-based intermediate tag
+    - stage:
+        name: build_ubuntu_amd64
+        identifier: build_ubuntu_amd64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: dockerhub
+                    repo: splitsoftware/fme-proxy-ubuntu
+                    dockerfile: ubuntu/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-amd64
+                    optimize: true
+
+    # Build ubuntu arm64 image
+    - stage:
+        name: build_ubuntu_arm64
+        identifier: build_ubuntu_arm64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: dockerhub
+                    repo: splitsoftware/fme-proxy-ubuntu
+                    dockerfile: ubuntu/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-arm64
+                    optimize: true
+
+    # Build redhat amd64 image
+    - stage:
+        name: build_redhat_amd64
+        identifier: build_redhat_amd64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: dockerhub
+                    repo: splitsoftware/fme-proxy-redhat
+                    dockerfile: redhat/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-amd64
+                    optimize: true
+
+    # Build redhat arm64 image
+    - stage:
+        name: build_redhat_arm64
+        identifier: build_redhat_arm64
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: setup_netrc
+                  identifier: setup_netrc
+                  spec:
+                    shell: Bash
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
+                    envVariables:
+                      TOKEN: <+secrets.getValue("fme-github-netrc-token")>
+                    command: envsubst < .netrc.tpl > .netrc
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: build_and_push
+                  identifier: build_and_push
+                  spec:
+                    connectorRef: dockerhub
+                    repo: splitsoftware/fme-proxy-redhat
+                    dockerfile: redhat/Dockerfile
+                    context: .
+                    tags:
+                      - sha-<+codebase.shortCommitSha>-arm64
+                    optimize: true
+
+    # Assemble multi-arch manifest lists and push final versioned tags
+    - stage:
+        name: merge_and_publish
+        identifier: merge_and_publish
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec:
+              size: flex
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: get_version
+                  identifier: get_version
+                  spec:
+                    connectorRef: dockerhub
+                    image: ubuntu:24.04
+                    shell: Bash
+                    command: echo "VERSION=$(cat VERSION)" >> $HARNESS_ENV
+              - step:
+                  type: Run
+                  name: docker_login
+                  identifier: docker_login
+                  spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
+                    shell: Bash
+                    envVariables:
+                      DOCKERHUB_USERNAME: <+secrets.getValue("DOCKERHUB_USERNAME")>
+                      DOCKERHUB_RW_TOKEN: <+secrets.getValue("DOCKERHUB_RW_TOKEN")>
+                    command: echo "${DOCKERHUB_RW_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+              - step:
+                  type: Run
+                  name: create_ubuntu_manifest
+                  identifier: create_ubuntu_manifest
+                  spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
+                    shell: Bash
+                    command: |
+                      SHA=<+codebase.shortCommitSha>
+                      docker buildx imagetools create \
+                        -t splitsoftware/fme-proxy-ubuntu:${VERSION} \
+                        -t splitsoftware/fme-proxy:${VERSION} \
+                        -t splitsoftware/fme-proxy:ubuntu-${VERSION} \
+                        -t splitsoftware/fme-proxy:latest \
+                        splitsoftware/fme-proxy-ubuntu:sha-${SHA}-amd64 \
+                        splitsoftware/fme-proxy-ubuntu:sha-${SHA}-arm64
+                      docker buildx imagetools inspect splitsoftware/fme-proxy:${VERSION}
+              - step:
+                  type: Run
+                  name: create_redhat_manifest
+                  identifier: create_redhat_manifest
+                  spec:
+                    connectorRef: dockerhub
+                    image: docker:dind
+                    shell: Bash
+                    command: |
+                      SHA=<+codebase.shortCommitSha>
+                      docker buildx imagetools create \
+                        -t splitsoftware/fme-proxy-redhat:${VERSION} \
+                        -t splitsoftware/fme-proxy:redhat-${VERSION} \
+                        splitsoftware/fme-proxy-redhat:sha-${SHA}-amd64 \
+                        splitsoftware/fme-proxy-redhat:sha-${SHA}-arm64
+                      docker buildx imagetools inspect splitsoftware/fme-proxy:redhat-${VERSION}
+        when:
+          pipelineStatus: Success

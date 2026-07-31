@@ -15,14 +15,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     cmake \
     wget \
     git \
-    libpcre3 \
-    libpcre3-dev \
+    libpcre2-dev \
     zlib1g \
     zlib1g-dev \
     libjansson-dev \
     libssl-dev \
     gawk \
-    -y 
+    perl \
+    -y
 RUN DEBIAN_FRONTEND=noninteractive apt remove --purge --auto-remove -y
 
 RUN mkdir -p /tmp/openresty
@@ -42,7 +42,7 @@ RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
 RUN cd ngx_http_proxy_connect_module && git checkout v0.0.7
 
 # 3.jwt module
-RUN git clone https://github.com/kjdev/nginx-auth-jwt
+RUN git clone --recurse-submodules https://github.com/kjdev/nginx-auth-jwt
 
 # 4. digest auth module
 RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
@@ -102,7 +102,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt install \
     ca-certificates \
     tzdata \
     libjansson-dev \
-    libpcre3 \
+    libpcre2-8-0 \
     zlib1g \
     gawk \
     -y
