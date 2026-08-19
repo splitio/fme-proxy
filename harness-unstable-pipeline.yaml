@@ -1,0 +1,216 @@
+pipeline:
+  name: fme-proxy-ci
+  identifier: fmeproxyci
+  orgIdentifier: PROD
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: githubdevops
+        repoName: fme-proxy
+        build: <+input>
+        sparseCheckout: []
+        depth: 50
+  stages:
+    # ----------------------------------------------------------------
+    # Stage 1 — Run bash script tests
+    # ----------------------------------------------------------------
+    - stage:
+        identifier: test_scripts
+        type: CI
+        name: Test bash scripts
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  identifier: run_tests
+                  type: Run
+                  name: Run genconf tests
+                  spec:
+                    shell: Bash
+                    command: make test-scripts
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: MarkAsFailure
+    # ----------------------------------------------------------------
+    # Stage 2 — Build platform-specific images (matrix: os × platform)
+    # ----------------------------------------------------------------
+    - stage:
+        name: Build Platform Specific Image
+        identifier: bps
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: <+<+matrix.platform>=="linux/amd64"?"Amd64":"Arm64">
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Docker auth
+                  identifier: docker_auth
+                  spec:
+                    shell: Bash
+                    command: |-
+                      HAR_AUTH=$(echo -n "harness:${HARNESS_REGISTRY_TOKEN}" | base64 -w 0)
+                      DHB_AUTH=$(echo -n "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" | base64 -w 0)
+                      mkdir -p "${HOME}/.docker"
+                      cat << EOF > "${HOME}/.docker/config.json"
+                      {
+                        "auths": {
+                          "harness0.harness.io": { "auth": "${HAR_AUTH}" },
+                          "https://index.docker.io/v1/": { "auth": "${DHB_AUTH}" }
+                        }
+                      }
+                      EOF
+                    envVariables:
+                      HARNESS_REGISTRY_TOKEN: <+secrets.getValue("harness-registry-token")>
+                      DOCKERHUB_USERNAME: infrasplit
+                      DOCKERHUB_TOKEN: <+secrets.getValue("dockerhub-harness-ci-main")>
+              - step:
+                  type: Run
+                  name: Build and push
+                  identifier: build_push
+                  spec:
+                    shell: Bash
+                    command: |-
+                      set -e
+
+                      # Keep .netrc for backward compat (COPY .netrc /root still in Dockerfile)
+                      touch .netrc
+
+                      SHORT_SHA=$(git rev-parse --short HEAD)
+                      PLATFORM_TAG=$(echo "${MATRIX_PLATFORM}" | tr '/' '-')
+
+                      IMAGE="harness0.harness.io/oci/fme-docker/fme-proxy-${MATRIX_OS}"
+                      TAG="sha-${SHORT_SHA}"
+
+                      docker buildx create --use --name builder
+                      docker buildx inspect --bootstrap
+
+                      docker buildx build \
+                        --secret id=ghtoken,env=GITHUB_TOKEN \
+                        --file "${MATRIX_OS}/Dockerfile" \
+                        --platform "${MATRIX_PLATFORM}" \
+                        --tag "${IMAGE}:${TAG}-${PLATFORM_TAG}" \
+                        --push \
+                        .
+                    envVariables:
+                      GITHUB_TOKEN: <+secrets.getValue("github-devops-token")>
+                      MATRIX_OS: <+matrix.os>
+                      MATRIX_PLATFORM: <+matrix.platform>
+        strategy:
+          matrix:
+            os:
+              - redhat
+              - ubuntu
+            platform:
+              - linux/amd64
+              - linux/arm64
+          maxConcurrency: 4
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: MarkAsFailure
+    # ----------------------------------------------------------------
+    # Stage 3 — Merge multi-arch manifests (matrix: os)
+    # Runs after all bps iterations complete.
+    # ----------------------------------------------------------------
+    - stage:
+        name: Merge Manifests
+        identifier: merge
+        type: CI
+        when:
+          pipelineStatus: Success
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Docker auth
+                  identifier: docker_auth
+                  spec:
+                    shell: Bash
+                    command: |-
+                      HAR_AUTH=$(echo -n "harness:${HARNESS_REGISTRY_TOKEN}" | base64 -w 0)
+                      DHB_AUTH=$(echo -n "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" | base64 -w 0)
+                      mkdir -p "${HOME}/.docker"
+                      cat << EOF > "${HOME}/.docker/config.json"
+                      {
+                        "auths": {
+                          "harness0.harness.io": { "auth": "${HAR_AUTH}" },
+                          "https://index.docker.io/v1/": { "auth": "${DHB_AUTH}" }
+                        }
+                      }
+                      EOF
+                    envVariables:
+                      HARNESS_REGISTRY_TOKEN: <+secrets.getValue("harness-registry-token")>
+                      DOCKERHUB_USERNAME: infrasplit
+                      DOCKERHUB_TOKEN: <+secrets.getValue("dockerhub-harness-ci-main")>
+              - step:
+                  type: Run
+                  name: Create manifest list and push
+                  identifier: create_manifest
+                  spec:
+                    shell: Bash
+                    command: |-
+                      set -e
+
+                      docker buildx create --use --name builder
+                      docker buildx inspect --bootstrap
+
+                      SHORT_SHA=$(git rev-parse --short HEAD)
+                      IMAGE="harness0.harness.io/oci/fme-docker/fme-proxy-<+matrix.os>"
+                      TAG="sha-${SHORT_SHA}"
+
+                      docker buildx imagetools create \
+                        -t "${IMAGE}:${TAG}" \
+                        "${IMAGE}:${TAG}-linux-amd64" \
+                        "${IMAGE}:${TAG}-linux-arm64"
+              - step:
+                  type: Run
+                  name: Inspect image
+                  identifier: inspect_image
+                  spec:
+                    shell: Bash
+                    command: |-
+                      SHORT_SHA=$(git rev-parse --short HEAD)
+                      IMAGE="harness0.harness.io/oci/fme-docker/fme-proxy-<+matrix.os>"
+                      TAG="sha-${SHORT_SHA}"
+                      docker buildx imagetools inspect "${IMAGE}:${TAG}"
+        strategy:
+          matrix:
+            os:
+              - redhat
+              - ubuntu
+          maxConcurrency: 2
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: MarkAsFailure
+  projectIdentifier: Harness_Split

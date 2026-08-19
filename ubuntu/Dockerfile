@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:24.04 AS builder
 
 ENV OPENRESTY_VERSION="1.27.1.2"
@@ -28,9 +29,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt remove --purge --auto-remove -y
 RUN mkdir -p /tmp/openresty
 WORKDIR /tmp/openresty
 
-# TODO: REMOVE THIS ONCE proxy_thru repo is public
-COPY .netrc /root
-
 # prepare sources:
 # ----------------
 # 1.nginx
@@ -49,7 +47,9 @@ RUN git clone https://github.com/mredolatti/nginx-http-auth-digest
 RUN cd nginx-http-auth-digest && git checkout e6e0fe8
 
 # 5. proxy-thru module
-RUN git clone https://github.com/splitio/ngx_http_proxy_thru_module
+# TODO: REMOVE secret mount ONCE proxy_thru repo is public
+RUN --mount=type=secret,id=ghtoken \
+    git clone "https://devops-split:$(cat /run/secrets/ghtoken)@github.com/splitio/ngx_http_proxy_thru_module"
 RUN cd ngx_http_proxy_thru_module && git checkout v1.1.0
 
 # build openresty with support for modules above
